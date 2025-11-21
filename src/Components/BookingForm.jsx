@@ -77,7 +77,7 @@ export default function BookingForm({ tripId, pricePerSeat, onSuccess }) {
         >
           <p className="text-base text-black">
             Total Price:{" "}
-            <span className="font-extrabold text-2xl text-green-700">₹{total}</span>
+            <span className="font-extrabold text-2xl text-green-600">₹{total}</span>
           </p>
         </motion.div>
       </AnimatePresence>
