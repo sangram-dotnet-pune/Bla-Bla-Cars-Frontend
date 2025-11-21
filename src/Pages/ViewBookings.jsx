@@ -44,7 +44,8 @@ export default function ViewBookings() {
         {bookings.map(b => (
           <div key={b.bookingId} className="border rounded p-4 flex justify-between items-center">
             <div>
-              <div className="font-semibold">Trip: {b.tripId}</div>
+            
+                <div>Name: {b.passengerName}</div>
               <div>Seats: {b.seatsBooked}</div>
               <div>Status: {b.status}</div>
               <div>Total: ₹{b.totalAmount}</div>

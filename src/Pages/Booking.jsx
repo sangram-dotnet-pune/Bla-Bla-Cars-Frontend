@@ -11,9 +11,10 @@ export default function Booking() {
 
   useEffect(() => {
     if (!tripId) return;
+
     (async () => {
       try {
-        const res = await api.get(`/api/trip/${tripId}`);
+        const res = await api.get(`/api/Trip/${tripId}`);
         setTrip(res.data);
       } catch (err) {
         console.error(err);
@@ -24,7 +25,7 @@ export default function Booking() {
     })();
   }, [tripId]);
 
-  const handleSuccess = (booking) => {
+  const handleSuccess = () => {
     alert("Booking successful!");
     navigate("/bookings");
   };
@@ -35,19 +36,35 @@ export default function Booking() {
   return (
     <div className="container mx-auto p-6">
       <div className="grid md:grid-cols-2 gap-6">
+
+        {/* Trip Details */}
         <div className="border rounded p-4">
           <h2 className="text-xl font-semibold mb-2">Trip Details</h2>
-          <p><strong>From:</strong> {trip.startCity ?? trip.StartLocation?? "—"}</p>
-          <p><strong>To:</strong> {trip.endCity ?? trip.EndLocation ?? "—"}</p>
-          <p><strong>Departure:</strong> {new Date(trip.DepartureTime ?? trip.startTime).toLocaleString()}</p>
-          <p><strong>Available seats:</strong> {trip.AvailableSeats}</p>
-          <p><strong>Price per seat:</strong> ₹{trip.PricePerSeat ?? trip.price}</p>
+
+          <p><strong>From:</strong> {trip.startLocation}</p>
+          <p><strong>To:</strong> {trip.endLocation}</p>
+
+          <p>
+            <strong>Departure:</strong>{" "}
+            {new Date(trip.departureTime).toLocaleString()}
+          </p>
+
+          <p><strong>Available seats:</strong> {trip.availableSeats}</p>
+
+          <p><strong>Price per seat:</strong> ₹{trip.pricePerSeat}</p>
         </div>
 
+        {/* Booking Form */}
         <div>
           <h2 className="text-xl font-semibold mb-2">Book now</h2>
-          <BookingForm tripId={trip.tripId ?? trip.id} pricePerSeat={trip.pricePerSeat ?? trip.price} onSuccess={handleSuccess} />
+
+          <BookingForm
+            tripId={trip.tripId}
+            pricePerSeat={trip.pricePerSeat}
+            onSuccess={handleSuccess}
+          />
         </div>
+
       </div>
     </div>
   );

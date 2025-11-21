@@ -1,5 +1,5 @@
 import React from "react";
-import useTrips from "../hooks/useTrips";
+import useTrips from "../Hooks/useTrips";
 import TripCard from "../Components/TripCard";
 
 export default function Trips() {

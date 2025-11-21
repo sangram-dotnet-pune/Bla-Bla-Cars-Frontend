@@ -11,7 +11,11 @@ export default function useTrips() {
     setError(null);
     try {
       const res = await api.get("/api/trip");
+      
       setTrips(res.data);
+     
+
+
     } catch (err) {
       console.error("Failed to fetch trips", err);
       setError(err);
