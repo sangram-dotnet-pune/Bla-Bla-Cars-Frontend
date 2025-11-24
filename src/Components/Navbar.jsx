@@ -1,49 +1,89 @@
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import ThemeToggle from "./ThemeToggle";
-import "./Navbar.css"
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../Context/AuthContext";
+import "./navbar.css";
 
 export default function Navbar() {
+  const { user, logoutUser } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logoutUser();
+    navigate("/login");
+  };
+
   return (
-    <motion.header
-  initial={{ y: -40, opacity: 0 }}
-  animate={{ y: 0, opacity: 1 }}
-  transition={{ duration: 0.5 }}
-  className="glass-navbar"
->
+    <nav className="glass-navbar dark px-6 py-3 flex justify-between items-center">
 
-      <div className="container mx-auto flex items-center justify-between py-3 px-4">
-        
-        {/* Logo */}
-        <motion.div whileHover={{ scale: 1.08 }}>
+      {/* 🔷 Logo */}
+      <Link
+        to="/"
+        className="text-2xl font-extrabold tracking-wide glass-link"
+        style={{ letterSpacing: "1px" }}
+      >
+        BlaBlaTrips
+      </Link>
+
+      {/* 🔹 Right Side */}
+      <div className="flex items-center gap-5">
+
+        {/* 🌐 Publish Rides Button */}
+        {user && (
           <Link
-            to="/"
-            className="text-2xl font-extrabold tracking-wide text-teal-400 drop-shadow-md"
+            to="/create-trip"
+            className="px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white
+                       backdrop-blur-md shadow-lg hover:bg-white/20 transition-all duration-300
+                       hover:shadow-[0_0_12px_rgba(68,237,217,0.6)]"
           >
-            BlaBla Cars
+            Publish Ride
           </Link>
-        </motion.div>
+        )}
 
-        {/* Navigation Links */}
-        <nav className="flex items-center gap-6 text-sm md:text-base font-semibold text-white dark:text-gray-200">
-          
-          {/* Trips */}
-          <motion.div whileHover={{ scale: 1.05 }}>
-            <Link to="/" className="relative group">
-              Trips
-              <span className="absolute left-0 -bottom-1 w-0 h-[3px] bg-teal-400 transition-all group-hover:w-full rounded-full"></span>
+        {/* 🌐 Login / Register */}
+        {!user && (
+          <>
+            <Link className="glass-link" to="/login">
+              Login
             </Link>
-          </motion.div>
 
-          {/* My Bookings */}
-          <motion.div whileHover={{ scale: 1.05 }}>
-            
-<Link to="/bookings" className="glass-link">My Bookings</Link>
-          </motion.div>
+            <Link className="glass-link" to="/register">
+              Register
+            </Link>
+          </>
+        )}
 
-          <ThemeToggle />
-        </nav>
+        {/* 🌟 Hi, User */}
+        {user && (
+          <div
+            className="px-4 py-1.5 rounded-full bg-white/10 border border-white/20
+                       backdrop-blur-xl text-white font-semibold shadow 
+                       hover:shadow-[0_0_15px_rgba(68,237,217,0.7)]
+                       transition-all duration-300">
+            Hi, {user.fullName}
+          </div>
+        )}
+
+        {/* 🌐 Profile Button */}
+        {user && (
+          <Link
+            to="/profile"
+            className="px-3 py-1.5 bg-white/20 backdrop-blur-md text-white rounded-full font-semibold 
+                       border border-white/20 hover:bg-white/30 transition-all shadow"
+          >
+            Profile
+          </Link>
+        )}
+
+        {/* 🔴 Logout */}
+        {user && (
+          <button
+            onClick={handleLogout}
+            className="px-4 py-1.5 rounded-xl bg-red-600 text-white font-semibold
+                       hover:bg-red-700 transition-all shadow"
+          >
+            Logout
+          </button>
+        )}
       </div>
-    </motion.header>
+    </nav>
   );
 }

@@ -2,27 +2,27 @@ import React from "react";
 import useTrips from "../Hooks/useTrips";
 import TripCard from "../Components/TripCard";
 import { motion, AnimatePresence } from "framer-motion";
-import FloatingLines from "../Components/FloatingLines"; // <-- ADD THIS
+import Galaxy from "../Components/Galaxy";
 
 export default function Trips() {
   const { trips, loading, error, refresh } = useTrips();
 
   return (
     <div className="relative w-full min-h-[100vh] overflow-hidden">
-      {/* --- FLOATING BACKGROUND --- */}
-      <div className="absolute inset-0 -z-0">
-        <FloatingLines
-          enabledWaves={["top", "middle", "bottom"]}
-          lineCount={[10, 15, 20]}
-          lineDistance={[8, 6, 4]}
-          bendRadius={5.0}
-          bendStrength={-0.5}
-          interactive={true}
-          parallax={true}
+      
+      {/* --- GALAXY BACKGROUND (behind everything) --- */}
+      <div className="absolute inset-0 -z-20">
+        <Galaxy 
+          mouseRepulsion={true}
+          mouseInteraction={true}
+          density={1.2}
+          glowIntensity={0.4}
+          saturation={0.8}
+          hueShift={240}
         />
       </div>
 
-      {/* --- PAGE CONTENT --- */}
+      {/* --- MAIN PAGE CONTENT --- */}
       <motion.div
         className="relative z-10 container mx-auto p-6 min-h-[80vh] text-white"
         initial={{ opacity: 0 }}
@@ -48,10 +48,10 @@ export default function Trips() {
         {loading && <div className="text-yellow-300">Loading trips…</div>}
         {error && <div className="text-red-400">Failed to load trips</div>}
 
-        {/* Trips List */}
+        {/* Trip list */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <AnimatePresence>
-            {trips && trips.length ? (
+            {trips && trips.length > 0 ? (
               trips.map((t, i) => (
                 <motion.div
                   key={t.tripId ?? t.id}

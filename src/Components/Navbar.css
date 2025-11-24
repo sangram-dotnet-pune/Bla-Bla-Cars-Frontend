@@ -1,45 +1,4 @@
-.glass-navbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  z-index: 1000;
-
-  /* Glassmorphism effect */
-  background: rgba(255, 255, 255, 0.15);      /* transparent white */
-  backdrop-filter: blur(18px);                /* main blur */
-  -webkit-backdrop-filter: blur(18px);        /* safari fix */
-
-  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-
-  padding: 12px 0;
-}
-
 .glass-navbar.dark {
   background: rgba(20, 20, 20, 0.15);
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-/* Link animation */
-.glass-link {
-  position: relative;
-  color: white;
-  font-weight: 600;
-}
-
-.glass-link::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: -3px;
-  width: 0%;
-  height: 3px;
-  background: #44edd9; /* changed from yellow 400 to teal 500 */
-  transition: 0.3s ease;
-  border-radius: 6px;
-}
-
-.glass-link:hover::after {
-  width: 100%;
 }

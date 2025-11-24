@@ -41,35 +41,38 @@ export default function Booking() {
     );
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden flex justify-center items-center p-4">
 
-      {/* 🔵 RippleGrid Background */}
-      <div style={{ width: '100%', height: '600px', position: 'relative' }}>
-  <Threads
-    amplitude={1}
-    distance={0}
-    enableMouseInteraction={true}
-  />
-</div>
+      {/* 🔵 FULLSCREEN THREADS BACKGROUND */}
+      <div className="absolute inset-0 -z-10">
+        <Threads
+          amplitude={1}
+          distance={0}
+          enableMouseInteraction={true}
+        />
+      </div>
 
-      {/* Foreground Content (glass, transparent) */}
-      <motion.div
-        className="container mx-auto p-6 min-h-[80vh] bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 shadow-xl"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="grid md:grid-cols-2 gap-6">
+      {/* 🔹 Foreground Glass Content */}
+     <motion.div
+  className="container mx-auto p-6 bg-white/30
+             backdrop-blur-lg rounded-xl border border-white/40 shadow-xl "
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  transition={{ duration: 0.5 }}
+>
+  <h2 className="text-2xl font-bold mb-4 text-white">Trip Details</h2>
+        <div className="grid md:grid-cols-2 gap-6 items-stretch">
 
-          {/* Trip Details – Glass Card */}
+          {/* Trip Details */}
           <motion.div
-            className="rounded-xl p-6 shadow-xl bg-white/30 backdrop-blur-lg border border-white/40"
+            className="rounded-xl p-6 shadow-xl bg-white/30 backdrop-blur-lg 
+                       border border-white/40 h-full"
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.1 }}
             whileHover={{ scale: 1.02 }}
           >
-            <h2 className="text-2xl font-bold mb-4 text-blue-600">Trip Details</h2>
+            {/* <h2 className="text-2xl font-bold mb-4 text-black">Trip Details</h2> */}
 
             <div className="space-y-3 text-black">
               <p className="flex justify-between">
@@ -81,7 +84,7 @@ export default function Booking() {
               </p>
 
               <p className="flex justify-between">
-                <strong>Departure:</strong>{" "}
+                <strong>Departure:</strong>
                 <span>{new Date(trip.departureTime).toLocaleString()}</span>
               </p>
 
@@ -94,7 +97,7 @@ export default function Booking() {
 
               <p className="flex justify-between border-t pt-3 mt-3 border-white/50">
                 <strong className="text-xl">Price per seat:</strong>
-                <span className="text-xl font-extrabold text-blue-600">
+                <span className="text-xl font-extrabold text-green-600">
                   ₹{trip.pricePerSeat}
                 </span>
               </p>
@@ -103,11 +106,12 @@ export default function Booking() {
 
           {/* Booking Form */}
           <motion.div
+             className="h-full"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <h2 className="text-2xl font-bold mb-2 text-blue-600">Book now</h2>
+            <h2 className="text-2xl font-bold mb-2 text-white">Book Now</h2>
 
             <BookingForm
               tripId={trip.tripId}
