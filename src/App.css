@@ -1,7 +1,15 @@
+body {
+  margin: 0;
+  padding: 2rem;
+  color: #f3f4f6; /* light grayish white to match navbar theme */
+  background-color: #1a202c; /* dark background for contrast */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 0;
   text-align: center;
 }
 
