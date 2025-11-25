@@ -2,3 +2,11 @@
   background: rgba(20, 20, 20, 0.15);
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
+
+.glass-link {
+  color: white;
+}
+
+.profile-icon:hover {
+  box-shadow: 0 0 12px rgba(255,255,255,0.7);
+}

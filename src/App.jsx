@@ -15,7 +15,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Navbar />
-      <div style={{ paddingTop: "60px" }}>
+      <div style={{ paddingTop: "0px" }}>
         <Routes>
           <Route path="/" element={<Trips />} />
           <Route path="/booking/:tripId" element={<Booking />} />
