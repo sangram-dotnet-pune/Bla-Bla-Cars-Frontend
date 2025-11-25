@@ -2,23 +2,21 @@ import React from "react";
 import useTrips from "../Hooks/useTrips";
 import TripCard from "../Components/TripCard";
 import { motion, AnimatePresence } from "framer-motion";
-import Galaxy from "../Components/Galaxy";
+import Threads from "../Components/Threads";
+
 
 export default function Trips() {
   const { trips, loading, error, refresh } = useTrips();
 
   return (
-    <div className="relative w-full min-h-[100vh] overflow-hidden">
-      
-      {/* --- GALAXY BACKGROUND (behind everything) --- */}
-      <div className="absolute inset-0 -z-20">
-        <Galaxy 
-          mouseRepulsion={true}
-          mouseInteraction={true}
-          density={1.2}
-          glowIntensity={0.4}
-          saturation={0.8}
-          hueShift={240}
+    <div className="relative min-h-screen overflow-hidden flex justify-center items-center p-4">
+
+      {/* 🔵 FULLSCREEN THREADS BACKGROUND */}
+      <div className="absolute inset-0 -z-10">
+        <Threads
+          amplitude={1}
+          distance={0}
+          enableMouseInteraction={true}
         />
       </div>
 
@@ -31,7 +29,7 @@ export default function Trips() {
       >
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-extrabold text-yellow-300 drop-shadow-lg">
+          <h1 className="text-3xl font-extrabold text-White drop-shadow-lg">
             Available Trips
           </h1>
 
@@ -39,7 +37,7 @@ export default function Trips() {
             onClick={refresh}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="text-sm px-4 py-2 bg-yellow-400 text-black font-semibold rounded-full shadow-md"
+            className="text-sm px-4 py-2 bg-white/60 text-black font-semibold rounded-full shadow-md"
           >
             Refresh
           </motion.button>
