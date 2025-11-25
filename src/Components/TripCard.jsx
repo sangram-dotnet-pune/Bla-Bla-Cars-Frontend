@@ -34,7 +34,7 @@ export default function TripCard({ trip }) {
 
           <p className="text-sm text-black">
             Seats available:{" "}
-            <span className="font-extrabold text-yellow-500">
+            <span className="font-extrabold text-green-500">
               {trip.availableSeats}
             </span>
           </p>
@@ -50,7 +50,7 @@ export default function TripCard({ trip }) {
             <Link
               to={`/booking/${trip.tripId}`}
               className="inline-block px-5 py-2 rounded-full font-bold 
-                         text-blue-900 shadow-md
+                         text-black shadow-md
                          bg-white/30 backdrop-blur-md border border-white/40
                          hover:bg-white/50 hover:shadow-xl
                          transition-all duration-300"
