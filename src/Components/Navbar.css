@@ -1,12 +1,96 @@
-.glass-navbar.dark {
-  background: rgba(20, 20, 20, 0.15);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+/* NAVBAR STYLES */
+
+/* Smooth transitions */
+.navbar-link {
+  transition: all 0.3s ease-in-out;
 }
 
-.glass-link {
-  color: white;
+/* Avatar animation */
+.avatar-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-.profile-icon:hover {
-  box-shadow: 0 0 12px rgba(255,255,255,0.7);
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Dropdown animation */
+.dropdown-enter {
+  animation: slideDown 0.15s ease-out;
+}
+
+.dropdown-exit {
+  animation: slideUp 0.15s ease-in;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* Mobile menu animation */
+.mobile-menu-enter {
+  animation: expandDown 0.3s ease-out;
+}
+
+@keyframes expandDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    transform: translateY(0);
+  }
+}
+
+/* Link hover effect */
+.nav-link:hover {
+  color: #2563eb;
+}
+
+/* Button styling */
+.nav-button {
+  transition: all 0.3s ease-in-out;
+}
+
+.nav-button:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .desktop-nav {
+    display: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-menu-button {
+    display: none;
+  }
 }

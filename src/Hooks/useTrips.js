@@ -11,14 +11,20 @@ export default function useTrips() {
     setError(null);
     try {
       const res = await api.get("/api/trip");
-      
-      setTrips(res.data);
-     
-
-
+      setTrips(res.data || []);
     } catch (err) {
       console.error("Failed to fetch trips", err);
-      setError(err);
+      // Extract error message safely
+      if (err.response?.status === 401) {
+        setError("Unauthorized. Please log in again.");
+      } else if (err.response?.status === 404) {
+        setError("API endpoint not found. Please check backend configuration.");
+      } else if (err.code === "ERR_NETWORK" || err.message?.includes("Failed to fetch")) {
+        setError("Backend services are not running. Please start the backend server.");
+      } else {
+        setError(err.response?.data?.message || "Failed to load trips. Please try again.");
+      }
+      setTrips([]);
     } finally {
       setLoading(false);
     }
