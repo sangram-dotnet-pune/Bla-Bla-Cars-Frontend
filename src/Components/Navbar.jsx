@@ -1,13 +1,14 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiMenu, FiX, FiLogOut, FiUser, FiEdit2, FiKey } from "react-icons/fi";
+import { FiMenu, FiX, FiLogOut, FiUser, FiEdit2, FiKey, FiMessageCircle } from "react-icons/fi";
 import { MdDirectionsCar } from "react-icons/md";
-import "./navbar.css";
+import "./Navbar.css";
 
 export default function Navbar() {
   const { user, logoutUser } = useAuth();
+  const isLoggedIn = Boolean(user?.userId || user?.id || user?.email);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -15,7 +16,6 @@ export default function Navbar() {
 
   const toggleDropdown = () => setOpen((prev) => !prev);
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -32,49 +32,61 @@ export default function Navbar() {
     setOpen(false);
   };
 
-  return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+  const desktopNavClass = ({ isActive }) =>
+    `px-4 py-2 text-[15px] font-semibold transition-all duration-300 rounded-xl ${
+      isActive
+        ? "text-[#00AFF5] bg-[#EAF8FE]"
+        : "bb-nav-link text-[#054752] hover:text-[#00AFF5] hover:bg-[#eef9fe]"
+    }`;
 
-          {/* LOGO */}
+  const mobileNavClass = ({ isActive }) =>
+    `block w-full px-4 py-2.5 text-[15px] text-left rounded-2xl transition-colors ${
+      isActive
+        ? "text-[#00AFF5] bg-[#EAF8FE] font-semibold"
+        : "text-[#054752] hover:bg-[#eef9fe]"
+    }`;
+
+  return (
+    <nav className="fixed top-0 left-0 right-0 z-50 bb-nav-surface backdrop-blur-xl">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center h-[72px]">
+
+          {/* Logo — pinned left */}
           <Link
             to="/"
-            className="flex items-center gap-2 text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+            className="flex items-center gap-3 text-[1.75rem] font-extrabold text-[#054752] hover:opacity-80 transition-opacity shrink-0"
           >
-            <MdDirectionsCar className="w-6 h-6 text-blue-600" />
-            <span className="hidden sm:inline">BlaBlaTrips</span>
+            <MdDirectionsCar className="w-9 h-9 text-[#00AFF5]" />
+            <span className="hidden sm:inline tracking-tight">BlaBlaTrips</span>
           </Link>
 
-          {/* DESKTOP NAVIGATION */}
-          <div className="hidden md:flex items-center gap-3">
-            {user ? (
+          {/* Nav links + profile — pinned right via ml-auto */}
+          <div className="hidden md:flex items-center gap-1 ml-auto">
+            {isLoggedIn ? (
               <>
-                <Link to="/trips" className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:text-blue-600 transition-all duration-300">
+                <NavLink to="/trips" className={desktopNavClass}>
                   Find Rides
-                </Link>
-                <Link to="/create-trip" className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:text-blue-600 transition-all duration-300">
+                </NavLink>
+                <NavLink to="/create-trip" className={desktopNavClass}>
                   + Publish Ride
-                </Link>
-                <Link to="/my-trips" className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:text-blue-600 transition-all duration-300">
+                </NavLink>
+                <NavLink to="/my-trips" className={desktopNavClass}>
                   My Trips
-                </Link>
-                <Link to="/bookings" className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:text-blue-600 transition-all duration-300">
+                </NavLink>
+                <NavLink to="/bookings" className={desktopNavClass}>
                   My Bookings
-                </Link>
-                <Link to="/chats" className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:text-blue-600 transition-all duration-300">
-                  💬 Chats
-                </Link>
+                </NavLink>
 
-                {/* USER PROFILE DROPDOWN */}
-                <div className="relative" ref={dropdownRef}>
+                {/* Profile dropdown — separated with a divider */}
+                <div className="relative ml-3 pl-3 border-l border-[#d6e4e8]" ref={dropdownRef}>
                   <button
                     onClick={toggleDropdown}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:text-blue-600 border-l border-gray-300 pl-4 ml-2 transition-all duration-300"
+                    className="flex items-center gap-2.5 py-1.5 rounded-2xl text-[15px] font-semibold text-[#054752] hover:text-[#00AFF5] transition-all duration-300"
                   >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
-                      {user.firstName?.charAt(0) || "U"}
+                    <div className="w-9 h-9 rounded-full bg-[#00AFF5] flex items-center justify-center text-white font-bold text-base shrink-0">
+                      {user?.firstName?.charAt(0) || "U"}
                     </div>
+                    <span className="hidden lg:inline">{user?.firstName}</span>
                   </button>
 
                   <AnimatePresence>
@@ -84,26 +96,29 @@ export default function Navbar() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden"
+                        className="absolute right-0 mt-2 w-65 bg-white rounded-2xl bb-elevation-soft border border-[#d6e4e8] overflow-hidden"
                       >
-                        <div className="px-4 py-3 border-b border-gray-100">
-                          <p className="text-sm text-gray-600">Signed in as</p>
-                          <p className="font-semibold text-gray-900">{user.firstName} {user.lastName}</p>
+                        <div className="px-4 py-3 border-b border-[#e4eef1]">
+                          <p className="text-sm text-[#8aacb1]">Signed in as</p>
+                          <p className="font-bold text-[#054752] text-[15px]">{user?.fullName} </p>
                         </div>
-                        <Link to="/profile" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
-                          <FiUser /> View Profile
+                        <Link to="/profile" className="flex items-center gap-3 px-4 py-3 text-[14px] text-[#054752] hover:bg-[#eef9fe] transition-colors" onClick={() => setOpen(false)}>
+                          <FiUser className="w-4 h-4" /> View Profile
                         </Link>
-                        <Link to="/edit-profile" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
-                          <FiEdit2 /> Edit Profile
+                        <Link to="/edit-profile" className="flex items-center gap-3 px-4 py-3 text-[14px] text-[#054752] hover:bg-[#eef9fe] transition-colors" onClick={() => setOpen(false)}>
+                          <FiEdit2 className="w-4 h-4" /> Edit Profile
                         </Link>
-                        <Link to="/change-password" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
-                          <FiKey /> Change Password
+                        <Link to="/change-password" className="flex items-center gap-3 px-4 py-3 text-[14px] text-[#054752] hover:bg-[#eef9fe] transition-colors" onClick={() => setOpen(false)}>
+                          <FiKey className="w-4 h-4" /> Change Password
+                        </Link>
+                        <Link to="/chats" className="flex items-center gap-3 px-4 py-3 text-[14px] text-[#054752] hover:bg-[#eef9fe] transition-colors" onClick={() => setOpen(false)}>
+                          <FiMessageCircle className="w-4 h-4" /> Chats
                         </Link>
                         <button
                           onClick={handleLogout}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100"
+                          className="w-full flex items-center gap-3 px-4 py-3 text-[14px] text-red-600 hover:bg-red-50 border-t border-[#e4eef1] transition-colors"
                         >
-                          <FiLogOut /> Logout
+                          <FiLogOut className="w-4 h-4" /> Logout
                         </button>
                       </motion.div>
                     )}
@@ -112,79 +127,69 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                <Link to="/login" className="px-4 py-2 rounded-lg border-2 border-blue-600 text-blue-600 font-semibold hover:bg-blue-50 transition-all duration-300">
+                <Link to="/login" className="bb-pill-button bb-button-secondary px-5 py-2 text-[#054752] font-semibold text-[15px]">
                   Login
                 </Link>
-                <Link to="/register" className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
+                <Link to="/register" className="bb-pill-button bb-button-primary px-5 py-2.5 text-white font-semibold text-[15px]">
                   Sign Up
                 </Link>
               </>
             )}
           </div>
 
-          {/* MOBILE MENU BUTTON */}
+          {/* Mobile hamburger — always far right */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden text-gray-700 hover:text-blue-600 transition-colors"
+            className="md:hidden ml-auto text-[#054752] hover:text-[#00AFF5] transition-colors"
           >
-            {mobileMenuOpen ? <FiX className="w-6 h-6" /> : <FiMenu className="w-6 h-6" />}
+            {mobileMenuOpen ? <FiX className="w-7 h-7" /> : <FiMenu className="w-7 h-7" />}
           </button>
         </div>
       </div>
 
-      {/* MOBILE MENU */}
+      {/* Mobile menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-t border-gray-200 bg-white/95"
+            className="md:hidden border-t border-[#d6e4e8] bg-white/95"
           >
-            <div className="px-4 py-4 space-y-3">
-              {user ? (
+            <div className="px-4 py-4 space-y-2">
+              {isLoggedIn ? (
                 <>
-                  <Link
-                    to="/create-trip"
-                    className="block w-full px-4 py-2 text-left text-gray-700 hover:bg-blue-50 rounded-lg transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
+                  {/* User greeting */}
+                  <div className="flex items-center gap-3 px-4 py-3 mb-1 bg-[#eef9fe] rounded-2xl">
+                    <div className="w-9 h-9 rounded-full bg-[#00AFF5] flex items-center justify-center text-white font-bold text-base shrink-0">
+                      {user?.firstName?.charAt(0) || "U"}
+                    </div>
+                    <span className="font-bold text-[#054752] text-[15px]">{user?.firstName} {user?.lastName}</span>
+                  </div>
+                  <NavLink to="/trips" className={mobileNavClass} onClick={() => setMobileMenuOpen(false)}>
+                    Find Rides
+                  </NavLink>
+                  <NavLink to="/create-trip" className={mobileNavClass} onClick={() => setMobileMenuOpen(false)}>
                     + Publish Ride
-                  </Link>
-                  <Link
-                    to="/my-trips"
-                    className="block w-full px-4 py-2 text-left text-gray-700 hover:bg-blue-50 rounded-lg transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
+                  </NavLink>
+                  <NavLink to="/my-trips" className={mobileNavClass} onClick={() => setMobileMenuOpen(false)}>
                     My Trips
-                  </Link>
-                  <Link
-                    to="/bookings"
-                    className="block w-full px-4 py-2 text-left text-gray-700 hover:bg-blue-50 rounded-lg transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
+                  </NavLink>
+                  <NavLink to="/bookings" className={mobileNavClass} onClick={() => setMobileMenuOpen(false)}>
                     My Bookings
-                  </Link>
-                  <Link
-                    to="/chats"
-                    className="block w-full px-4 py-2 text-left text-gray-700 hover:bg-blue-50 rounded-lg transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    💬 Chats
-                  </Link>
-                  <Link
-                    to="/profile"
-                    className="block w-full px-4 py-2 text-left text-gray-700 hover:bg-blue-50 rounded-lg transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
+                  </NavLink>
+                  <NavLink to="/chats" className={mobileNavClass} onClick={() => setMobileMenuOpen(false)}>
+                    Chats
+                  </NavLink>
+                  <NavLink to="/profile" className={mobileNavClass} onClick={() => setMobileMenuOpen(false)}>
                     Profile
-                  </Link>
+                  </NavLink>
+                  <NavLink to="/edit-profile" className={mobileNavClass} onClick={() => setMobileMenuOpen(false)}>
+                    Edit Profile
+                  </NavLink>
                   <button
-                    onClick={() => {
-                      handleLogout();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                    className="w-full px-4 py-2.5 text-[15px] text-left text-red-600 hover:bg-red-50 rounded-2xl transition-colors border-t border-[#e4eef1] mt-1"
                   >
                     Logout
                   </button>
@@ -193,14 +198,14 @@ export default function Navbar() {
                 <>
                   <Link
                     to="/login"
-                    className="block w-full px-4 py-2 text-center text-gray-700 border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                    className="block w-full px-4 py-2.5 text-[15px] text-center text-[#054752] border border-[#c9dde3] rounded-[30px] hover:bg-[#eef9fe] transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Login
                   </Link>
                   <Link
                     to="/register"
-                    className="block w-full px-4 py-2 text-center text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all"
+                    className="block w-full px-4 py-2.5 text-[15px] text-center text-white bg-[#00AFF5] rounded-[30px] hover:bg-[#009ad9] transition-all"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Sign Up

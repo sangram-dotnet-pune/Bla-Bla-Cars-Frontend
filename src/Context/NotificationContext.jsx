@@ -4,75 +4,83 @@ import { useAuth } from "./AuthContext";
 
 const NotificationContext = createContext();
 
+const hubCandidates = () => {
+  const gateway = import.meta.env.VITE_API_GATEWAY || "http://localhost:5003";
+  return [`${gateway.replace(/\/$/, "")}/hubs/chat`];
+};
+
 export const NotificationProvider = ({ children }) => {
   const { user } = useAuth();
-  const [connection, setConnection] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     if (!user?.userId) {
-      if (connection) {
-        connection.stop();
-        setConnection(null);
-        setIsConnected(false);
-      }
-      return;
+      setIsConnected(false);
+      return undefined;
     }
 
-    const hubUrl = import.meta.env.VITE_CHAT_HUB || 
-                   `${import.meta.env.VITE_API_GATEWAY || "http://localhost:5001"}/hubs/chat`;
-
-    const conn = new HubConnectionBuilder()
-      .withUrl(hubUrl, {
-        accessTokenFactory: () => localStorage.getItem("token") || "",
-        withCredentials: true,
-      })
-      .withAutomaticReconnect()
-      .configureLogging(LogLevel.Error)
-      .build();
-
-    // Listen for booking status changes
-    conn.on("BookingStatusChanged", (notification) => {
-      const newNotification = {
-        id: Date.now(),
-        type: notification.status === "Confirmed" ? "success" : "error",
-        title: notification.status === "Confirmed" ? "Booking Approved! 🎉" : "Booking Rejected",
-        message: notification.message,
-        bookingId: notification.bookingId,
-        tripId: notification.tripId,
-        timestamp: notification.timestamp || new Date().toISOString(),
-      };
-      setNotifications((prev) => [newNotification, ...prev]);
-
-      // Auto remove after 10 seconds
-      setTimeout(() => {
-        setNotifications((prev) => prev.filter((n) => n.id !== newNotification.id));
-      }, 10000);
-    });
-
-    const startConnection = async () => {
+    const start = async () => {
+      let activeConn = null;
       try {
-        await conn.start();
-        setIsConnected(true);
+        const candidates = hubCandidates();
 
-        // Register user
-        if (user?.userId) {
-          await conn.invoke("Register", user.userId);
+        for (const url of candidates) {
+          try {
+           const conn = new HubConnectionBuilder()
+  .withUrl(url, {
+    accessTokenFactory: () => localStorage.getItem("token") || "",
+  })
+  .withAutomaticReconnect()
+  .configureLogging(LogLevel.Error)
+  .build();
+
+            conn.on("ReceiveMessage", (senderId, messageText) => {
+              if (!messageText) return;
+              const n = {
+                id: Date.now() + Math.random(),
+                type: "success",
+                title: "New Message",
+                message: String(messageText),
+                senderId: senderId ? String(senderId) : null,
+                timestamp: new Date().toISOString(),
+              };
+
+              setNotifications((prev) => [n, ...prev]);
+              setTimeout(() => {
+                setNotifications((prev) => prev.filter((x) => x.id !== n.id));
+              }, 7000);
+            });
+
+            await conn.start();
+            activeConn = conn;
+            break;
+          } catch {
+            // try next endpoint
+          }
         }
+
+        if (!activeConn) throw new Error("No reachable chat hub endpoint");
+        setIsConnected(true);
+        return activeConn;
       } catch (err) {
-        console.error("SignalR connection failed:", err);
+        console.error("SignalR notification connection failed:", err);
         setIsConnected(false);
-        
+        return null;
       }
     };
 
-    startConnection();
-    setConnection(conn);
+    let conn;
+    start().then((c) => {
+      conn = c;
+    });
 
     return () => {
-      conn.off("BookingStatusChanged");
-      conn.stop();
+      if (conn) {
+        conn.off("ReceiveMessage");
+        conn.stop();
+      }
+      setIsConnected(false);
     };
   }, [user?.userId]);
 

@@ -1,123 +1,239 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FiMapPin, FiClock, FiUsers, FiStar, FiChevronRight } from "react-icons/fi";
+import { FiStar, FiZap, FiUsers } from "react-icons/fi";
+import { MdDirectionsCar } from "react-icons/md";
 
 export default function TripCard({ trip }) {
-  const formattedDate = new Date(trip.departureTime).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+  const date = new Date(trip.departureTime);
+  const seatsAvailable = Number(trip.availableSeats);
+  const hasSeatsValue = Number.isFinite(seatsAvailable);
+  const isFull = hasSeatsValue && seatsAvailable <= 0;
 
-  const formattedTime = new Date(trip.departureTime).toLocaleTimeString("en-US", {
+  const formattedTime = date.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
-    hour12: true,
+    hour12: false,
   });
 
-  const estimatedDuration = Math.floor(Math.random() * 2) + 2; // 2-3 hours (demo)
+  // Fake arrival time: departure + random 2–10h for demo
+  const estimatedDuration = Math.floor(Math.random() * 8) + 2;
+  const arrivalDate = new Date(date.getTime() + estimatedDuration * 60 * 60 * 1000);
+  const arrivalTime = arrivalDate.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  const driverName = trip.driverName || "Driver";
+  const driverRating = trip.driverRating || null;
+  const driverAvatar = trip.driverAvatar || null;
+  const instantBooking = trip.instantBooking || false;
+  const showSeatsMeta = hasSeatsValue;
+  const showMetaDivider = instantBooking || showSeatsMeta;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -8, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
-      transition={{ duration: 0.3 }}
-      className="h-full rounded-2xl bg-white border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300"
+      whileHover={!isFull ? { y: -2, boxShadow: "0 8px 32px rgba(5,71,82,0.13)" } : undefined}
+      transition={{ duration: 0.25 }}
     >
-      {/* TOP ACCENT BAR */}
-      <div className="h-1 bg-gradient-to-r from-blue-500 to-blue-600"></div>
+      {isFull ? (
+        <div className="block no-underline pointer-events-none">
+          <div className="bg-white rounded-2xl border border-[#e4eef1] overflow-hidden cursor-not-allowed opacity-80 transition-all duration-200">
+            <div className="flex items-center justify-between px-6 pt-5 pb-4">
 
-      <div className="p-6 space-y-5">
+              {/* Left: departure time + city */}
+              <div className="min-w-[72px]">
+                <p className="text-[22px] font-extrabold text-[#0d2b36] leading-none">{formattedTime}</p>
+                <p className="text-[14px] font-semibold text-[#0d2b36] mt-1">{trip.startLocation}</p>
+              </div>
 
-        {/* ROUTE SECTION */}
-        <div className="space-y-4">
-          {/* From Location */}
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
-              <FiMapPin className="w-5 h-5" />
+              {/* Center: route line */}
+              <div className="flex-1 flex flex-col items-center px-4">
+                <div className="flex items-center w-full gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full border-2 border-[#6b8fa0] bg-white shrink-0" />
+                  <div className="flex-1 h-[2px] bg-[#6b8fa0]" />
+                  <span className="text-[12px] font-semibold text-[#6b8fa0] whitespace-nowrap px-1.5">
+                    {estimatedDuration}h{String(Math.floor(Math.random() * 60)).padStart(2,"0")}
+                  </span>
+                  <div className="flex-1 h-[2px] bg-[#6b8fa0]" />
+                  <div className="w-2.5 h-2.5 rounded-full border-2 border-[#6b8fa0] bg-[#6b8fa0] shrink-0" />
+                </div>
+              </div>
+
+              {/* Right: arrival time + city */}
+              <div className="min-w-[72px] text-right">
+                <p className="text-[22px] font-extrabold text-[#0d2b36] leading-none">{arrivalTime}</p>
+                <p className="text-[14px] font-semibold text-[#0d2b36] mt-1">{trip.endLocation}</p>
+              </div>
+
+              {/* Price — far right */}
+              <div className="ml-8 text-right shrink-0">
+                <p className="text-[26px] font-extrabold text-[#0d2b36] leading-none">
+                  ₹<span>{trip.pricePerSeat}</span>
+                  <span className="text-[14px] font-semibold text-[#6b8fa0]">.00</span>
+                </p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">From</p>
-              <p className="text-lg font-bold text-gray-900 truncate">{trip.startLocation}</p>
-            </div>
-          </div>
 
-          {/* Duration Indicator */}
-          <div className="flex items-center gap-2 pl-5">
-            <div className="flex-1 h-1 bg-gradient-to-r from-blue-400 to-transparent rounded-full"></div>
-            <span className="text-xs text-gray-500 font-semibold whitespace-nowrap">
-              <FiClock className="w-4 h-4 inline mr-1" />
-              {estimatedDuration}h
-            </span>
-          </div>
+            <div className="h-px bg-[#eaf1f4] mx-6" />
 
-          {/* To Location */}
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 flex-shrink-0">
-              <FiMapPin className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">To</p>
-              <p className="text-lg font-bold text-gray-900 truncate">{trip.endLocation}</p>
+            <div className="flex items-center gap-4 px-6 py-3.5">
+              <MdDirectionsCar className="w-8 h-8 text-[#6b8fa0] shrink-0" />
+
+              <div className="relative shrink-0">
+                {driverAvatar ? (
+                  <img
+                    src={driverAvatar}
+                    alt={driverName}
+                    className="w-9 h-9 rounded-full object-cover border-2 border-white shadow"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-[#00AFF5] flex items-center justify-center text-white font-bold text-base border-2 border-white shadow">
+                    {driverName.charAt(0)}
+                  </div>
+                )}
+                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#00AFF5] rounded-full flex items-center justify-center">
+                  <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
+                    <path d="M2 5l2.5 2.5L8 3" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+
+              <span className="text-[15px] font-semibold text-[#0d2b36]">{driverName}</span>
+              {driverRating && (
+                <span className="flex items-center gap-1 text-[14px] font-semibold text-[#0d2b36]">
+                  <FiStar className="w-3.5 h-3.5 fill-[#0d2b36] text-[#0d2b36]" />
+                  {driverRating}
+                </span>
+              )}
+
+              {showMetaDivider && (
+                <span className="text-[#c5d8dc] text-lg leading-none">|</span>
+              )}
+
+              {instantBooking && (
+                <span className="flex items-center gap-1 text-[14px] font-semibold text-[#0d2b36]">
+                  <FiZap className="w-4 h-4 text-[#0d2b36]" />
+                  Instant Booking
+                </span>
+              )}
+
+              {showSeatsMeta && (
+                <span className={`flex items-center gap-1.5 text-[14px] font-semibold ${isFull ? "text-[#e05252]" : "text-[#0d2b36]"}`}>
+                  <FiUsers className="w-4 h-4" />
+                  {isFull ? "Full" : `Max. ${seatsAvailable}`}
+                </span>
+              )}
             </div>
           </div>
         </div>
+      ) : (
+      <Link to={`/booking/${trip.tripId}`} className="block no-underline">
+        <div className="bg-white rounded-2xl border border-[#e4eef1] overflow-hidden cursor-pointer transition-all duration-200">
 
-        {/* DIVIDER */}
-        <div className="h-px bg-gray-200"></div>
+         
+          <div className="flex items-center justify-between px-6 pt-5 pb-4">
 
-        {/* DETAILS GRID */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Date & Time */}
-          <div>
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">
-              <FiClock className="w-3 h-3 inline mr-1" />
-              Date & Time
-            </p>
-            <p className="text-sm font-bold text-gray-900">{formattedDate}</p>
-            <p className="text-sm text-blue-600 font-semibold">{formattedTime}</p>
-          </div>
+            {/* Left: departure time + city */}
+            <div className="min-w-[72px]">
+              <p className="text-[22px] font-extrabold text-[#0d2b36] leading-none">{formattedTime}</p>
+              <p className="text-[14px] font-semibold text-[#0d2b36] mt-1">{trip.startLocation}</p>
+            </div>
 
-          {/* Available Seats */}
-          <div>
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">
-              <FiUsers className="w-3 h-3 inline mr-1" />
-              Seats Available
-            </p>
-            <div className="flex items-center gap-2">
-              <p className="text-2xl font-bold text-green-600">{trip.availableSeats}</p>
-              <span className="text-xs text-gray-500">seats</span>
+            {/* Center: route line */}
+            <div className="flex-1 flex flex-col items-center px-4">
+              <div className="flex items-center w-full gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full border-2 border-[#6b8fa0] bg-white shrink-0" />
+                <div className="flex-1 h-[2px] bg-[#6b8fa0]" />
+                <span className="text-[12px] font-semibold text-[#6b8fa0] whitespace-nowrap px-1.5">
+                  {estimatedDuration}h{String(Math.floor(Math.random() * 60)).padStart(2,"0")}
+                </span>
+                <div className="flex-1 h-[2px] bg-[#6b8fa0]" />
+                <div className="w-2.5 h-2.5 rounded-full border-2 border-[#6b8fa0] bg-[#6b8fa0] shrink-0" />
+              </div>
+            </div>
+
+            {/* Right: arrival time + city */}
+            <div className="min-w-[72px] text-right">
+              <p className="text-[22px] font-extrabold text-[#0d2b36] leading-none">{arrivalTime}</p>
+              <p className="text-[14px] font-semibold text-[#0d2b36] mt-1">{trip.endLocation}</p>
+            </div>
+
+            {/* Price — far right */}
+            <div className="ml-8 text-right shrink-0">
+              <p className="text-[26px] font-extrabold text-[#0d2b36] leading-none">
+                ₹<span>{trip.pricePerSeat}</span>
+                <span className="text-[14px] font-semibold text-[#6b8fa0]">.00</span>
+              </p>
             </div>
           </div>
-        </div>
 
-        {/* DIVIDER */}
-        <div className="h-px bg-gray-200"></div>
+          {/* ── Divider ──────────────────────────────────────────────────── */}
+          <div className="h-px bg-[#eaf1f4] mx-6" />
 
-        {/* PRICE & BUTTON */}
-        <div className="flex items-end justify-between pt-2">
-          <div>
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">
-              <FiStar className="w-3 h-3 inline mr-1" />
-              Price per Seat
-            </p>
-            <p className="text-3xl font-extrabold text-blue-600">
-              ₹<span>{trip.pricePerSeat}</span>
-            </p>
+          {/* ── Row 2: Driver info + badges ──────────────────────────────── */}
+          <div className="flex items-center gap-4 px-6 py-3.5">
+
+            {/* Car icon */}
+            <MdDirectionsCar className="w-8 h-8 text-[#6b8fa0] shrink-0" />
+
+            {/* Avatar */}
+            <div className="relative shrink-0">
+              {driverAvatar ? (
+                <img
+                  src={driverAvatar}
+                  alt={driverName}
+                  className="w-9 h-9 rounded-full object-cover border-2 border-white shadow"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-[#00AFF5] flex items-center justify-center text-white font-bold text-base border-2 border-white shadow">
+                  {driverName.charAt(0)}
+                </div>
+              )}
+              {/* Verified badge */}
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#00AFF5] rounded-full flex items-center justify-center">
+                <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
+                  <path d="M2 5l2.5 2.5L8 3" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            </div>
+
+            {/* Name + rating */}
+            <span className="text-[15px] font-semibold text-[#0d2b36]">{driverName}</span>
+            {driverRating && (
+              <span className="flex items-center gap-1 text-[14px] font-semibold text-[#0d2b36]">
+                <FiStar className="w-3.5 h-3.5 fill-[#0d2b36] text-[#0d2b36]" />
+                {driverRating}
+              </span>
+            )}
+
+            {/* Divider pip */}
+            {showMetaDivider && (
+              <span className="text-[#c5d8dc] text-lg leading-none">|</span>
+            )}
+
+            {/* Instant booking badge */}
+            {instantBooking && (
+              <span className="flex items-center gap-1 text-[14px] font-semibold text-[#0d2b36]">
+                <FiZap className="w-4 h-4 text-[#0d2b36]" />
+                Instant Booking
+              </span>
+            )}
+
+            {/* Seats badge */}
+            {showSeatsMeta && (
+              <span className="flex items-center gap-1.5 text-[14px] font-semibold text-[#0d2b36]">
+                <FiUsers className="w-4 h-4" />
+                Max. {seatsAvailable} 
+              </span>
+            )}
           </div>
 
-          <motion.div whileHover={{ x: 4 }} whileTap={{ scale: 0.95 }}>
-            <Link
-              to={`/booking/${trip.tripId}`}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-300"
-            >
-              Book Now
-              <FiChevronRight className="w-4 h-4" />
-            </Link>
-          </motion.div>
         </div>
-      </div>
+      </Link>
+      )}
     </motion.div>
   );
 }

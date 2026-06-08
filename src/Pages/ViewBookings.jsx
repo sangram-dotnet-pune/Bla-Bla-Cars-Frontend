@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/apiClient";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiMessageCircle } from "react-icons/fi";
+import { FiX } from "react-icons/fi";
 
 export default function ViewBookings() {
   const navigate = useNavigate();
@@ -10,18 +10,17 @@ export default function ViewBookings() {
   const [loading, setLoading] = useState(true);
   const [tripDetails, setTripDetails] = useState({});
   const [userNames, setUserNames] = useState({});
-  const [tripLoadError, setTripLoadError] = useState(null);
   const [statusFilter, setStatusFilter] = useState("All");
+  const [selectedBookingCard, setSelectedBookingCard] = useState(null);
 
   const load = async () => {
     setLoading(true);
     try {
       const res = await api.get("/booking");
       setBookings(res.data);
-      
-      // Fetch trip details for all bookings to get driver names
+
       if (res.data && res.data.length > 0) {
-        const tripIds = [...new Set(res.data.map((b) => b.tripId).filter((id) => id))];
+        const tripIds = [...new Set(res.data.map((b) => b.tripId).filter(Boolean))];
         const newTripDetails = { ...tripDetails };
         const newUserNames = { ...userNames };
 
@@ -31,18 +30,17 @@ export default function ViewBookings() {
               const tripRes = await api.get(`/api/Trip/${tripId}`);
               newTripDetails[tripId] = tripRes.data;
 
-              // Fetch owner name if we have ownerId
               if (tripRes.data?.ownerId && !newUserNames[tripRes.data.ownerId]) {
                 try {
                   const userRes = await api.get(`/user/${tripRes.data.ownerId}`);
-                  newUserNames[tripRes.data.ownerId] = userRes.data?.fullName || userRes.data?.name || "Unknown";
-                } catch (err) {
-                  console.error(`Failed to load user ${tripRes.data.ownerId}`, err);
+                  newUserNames[tripRes.data.ownerId] =
+                    userRes.data?.fullName || userRes.data?.name || "Unknown";
+                } catch {
                   newUserNames[tripRes.data.ownerId] = "Unknown";
                 }
               }
-            } catch (err) {
-              console.error(`Failed to load trip ${tripId}`, err);
+            } catch {
+              // skip failed trip
             }
           }
         }
@@ -51,111 +49,173 @@ export default function ViewBookings() {
       }
     } catch (err) {
       console.error(err);
-      if (err.response?.status === 401) {
-        alert("Please login to view bookings");
-      } else {
-        alert("Failed to load bookings");
-      }
+      if (err.response?.status === 401) alert("Please login to view bookings");
+      else alert("Failed to load bookings");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFilterChange = (status) => {
-    setStatusFilter(status);
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   const handleCancel = async (id) => {
-    if (!confirm("Cancel booking?")) return;
+    if (!confirm("Cancel this booking?")) return;
     try {
       await api.put(`/booking/cancel/${id}`);
-      alert("Cancelled");
       load();
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert("Failed to cancel");
     }
   };
 
-  const getStatusClass = (status) => {
+  const fmt = (dateStr) => {
+    if (!dateStr) return "—";
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  };
+
+  const fmtDate = (dateStr) => {
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleDateString("en-IN", {
+      weekday: "short", day: "numeric", month: "short", year: "numeric",
+    });
+  };
+
+  const statusMeta = (status) => {
     switch (status) {
-      case "Confirmed":
-        return "text-green-600 font-bold";
-      case "Cancelled":
-        return "text-red-600 font-bold";
-      default:
-        return "text-blue-600 font-bold";
+      case "Confirmed":  return { label: "Confirmed",  dot: "bg-green-500",  text: "text-green-700",  bg: "bg-green-50"  };
+      case "Cancelled":  return { label: "Cancelled",  dot: "bg-red-400",    text: "text-red-600",    bg: "bg-red-50"    };
+      case "Pending":    return { label: "Pending",    dot: "bg-yellow-400", text: "text-yellow-700", bg: "bg-yellow-50" };
+      case "Rejected":   return { label: "Rejected",   dot: "bg-red-400",    text: "text-red-600",    bg: "bg-red-50"    };
+      default:           return { label: status || "—", dot: "bg-gray-400",  text: "text-gray-600",   bg: "bg-gray-50"   };
     }
   };
+
+  const filters = ["All", "Pending", "Confirmed", "Cancelled", "Rejected"];
 
   const filteredBookings =
     statusFilter === "All"
       ? bookings
-      : bookings.filter(
-          (b) => (b.status || "").toLowerCase() === statusFilter.toLowerCase()
-        );
+      : bookings.filter((b) => (b.status || "").toLowerCase() === statusFilter.toLowerCase());
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-[#f5f5f5] pt-24 pb-16 px-4">
+      <div className="max-w-4xl mx-auto">
 
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200 rounded-full opacity-30 blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-200 rounded-full opacity-30 blur-3xl animate-pulse" style={{animationDelay: "1s"}}></div>
-      </div>
+        {/* Page Title */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="text-3xl font-bold text-gray-900" style={{ fontFamily: "'Nunito', sans-serif" }}>
+            My bookings
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">Your upcoming and past rides</p>
+        </motion.div>
 
-      {/* CONTENT */}
-      <motion.div
-        className="container mx-auto p-6 min-h-screen pt-24"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4 }}
-      >
-        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              My Bookings
-            </h1>
-            <p className="text-gray-600 text-sm">Manage your ride bookings</p>
-          </div>
-
-          {/* Status Filter Dropdown */}
-          <div className="relative">
-            <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
-              Filter by Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => handleFilterChange(e.target.value)}
-              className="appearance-none bg-white border-2 border-gray-300 text-gray-900 rounded-xl px-5 py-3 pr-10 font-semibold shadow-md hover:border-blue-500 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all cursor-pointer min-w-[180px]"
+        {/* Filter tabs */}
+        <div className="flex gap-2 mb-6 flex-wrap">
+          {filters.map((f) => (
+            <button
+              key={f}
+              onClick={() => setStatusFilter(f)}
+              className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
+                statusFilter === f
+                  ? "bg-[#00b2e3] text-white border-[#00b2e3]"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+              }`}
             >
-              <option value="All">📋 All Bookings</option>
-              <option value="Pending">⏳ Pending</option>
-              <option value="Confirmed">✅ Confirmed</option>
-              <option value="Rejected">❌ Rejected</option>
-              <option value="Cancelled">🚫 Cancelled</option>
-            </select>
-            <div className="pointer-events-none absolute right-3 top-[38px] text-gray-500">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
+              {f}
+            </button>
+          ))}
         </div>
+
+        {/* Booking details modal */}
+        <AnimatePresence>
+          {selectedBookingCard && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
+            >
+              <div className="absolute inset-0 bg-black/40" onClick={() => setSelectedBookingCard(null)} />
+
+              <motion.div
+                initial={{ y: 40, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 40, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-gray-200 p-6"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Booking details</h3>
+                    <p className="text-sm text-gray-500">Details for your booking</p>
+                  </div>
+                  <button onClick={() => setSelectedBookingCard(null)} className="p-2 rounded-full hover:bg-gray-100">
+                    <FiX className="w-5 h-5 text-gray-600" />
+                  </button>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-gray-500">Route</p>
+                    <p className="font-semibold text-gray-900">{selectedBookingCard.startLocation || tripDetails[selectedBookingCard.tripId]?.startLocation || '—'} → {selectedBookingCard.endLocation || tripDetails[selectedBookingCard.tripId]?.endLocation || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Driver</p>
+                    <p className="font-semibold text-gray-900">{userNames[tripDetails[selectedBookingCard.tripId]?.ownerId] || selectedBookingCard.tripOwnerName || 'Driver'}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-gray-500">Departure</p>
+                    <p className="font-semibold text-gray-900">{fmt(selectedBookingCard.departureTime || tripDetails[selectedBookingCard.tripId]?.departureTime)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Seats</p>
+                    <p className="font-semibold text-gray-900">{selectedBookingCard.seatsBooked} seat{selectedBookingCard.seatsBooked > 1 ? 's' : ''}</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => setSelectedBookingCard(null)}
+                    className="px-4 py-2 rounded-full border border-gray-200 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      try {
+                        localStorage.setItem('preSelectChat', JSON.stringify({ type: 'driver', bookingId: selectedBookingCard.bookingId, tripId: selectedBookingCard.tripId }));
+                        navigate('/chats');
+                      } catch (err) {
+                        console.error('Failed to open chat', err);
+                        navigate('/chats');
+                      }
+                    }}
+                    className="px-4 py-2 bg-[#00b2e3] text-white rounded-full text-sm font-semibold hover:bg-[#009fcd] transition-colors"
+                  >
+                    Chat with owner
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Loading */}
         {loading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-blue-300"
-          >
-            Loading…
-          </motion.div>
+          <div className="flex justify-center pt-16">
+            <svg className="animate-spin w-8 h-8 text-[#00b2e3]" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          </div>
         )}
 
         {/* Empty state */}
@@ -163,127 +223,112 @@ export default function ViewBookings() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-white"
+            className="bg-white rounded-2xl border border-gray-200 p-12 text-center"
           >
-            {statusFilter === "All" ? "No bookings found." : `No ${statusFilter.toLowerCase()} bookings found.`}
+            <div className="text-4xl mb-3">🚗</div>
+            <p className="text-gray-500 font-medium">
+              {statusFilter === "All" ? "No bookings yet." : `No ${statusFilter.toLowerCase()} bookings.`}
+            </p>
+            <button
+              onClick={() => navigate("/")}
+              className="mt-4 px-5 py-2 bg-[#00b2e3] text-white rounded-full text-sm font-semibold hover:bg-[#009fcd] transition-colors"
+            >
+              Find a ride
+            </button>
           </motion.div>
         )}
 
-        {/* BOOKINGS LIST */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Booking Cards */}
+        <div className="space-y-4">
           <AnimatePresence>
-            {filteredBookings.map((b, i) => (
-              <motion.div
-                key={b.bookingId}
-                initial={{ opacity: 0, y: 25 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.35, delay: i * 0.05 }}
-                className="relative bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow"
-              >
-                {/* Status Badge */}
-                <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold ${
-                  b.status === "Confirmed" ? "bg-green-100 text-green-700" :
-                  b.status === "Cancelled" ? "bg-red-100 text-red-700" :
-                  b.status === "Pending" ? "bg-yellow-100 text-yellow-700" :
-                  "bg-blue-100 text-blue-700"
-                }`}>
-                  {b.status}
-                </div>
+            {filteredBookings.map((b, i) => {
+              const trip = tripDetails[b.tripId];
+              const ownerName = userNames[trip?.ownerId] || b.tripOwnerName || b.driverName || b.ownerName || "Driver";
+              const start = b.startLocation || trip?.startLocation || "—";
+              const end   = b.endLocation   || trip?.endLocation   || "—";
+              const depTime = b.departureTime || trip?.departureTime;
+              const arrTime = b.arrivalTime   || trip?.arrivalTime;
+              const sm = statusMeta(b.status);
 
-                {/* Card Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 text-white">
-                  <h3 className="text-xl font-bold truncate">{b.passengerName}</h3>
-                  <p className="text-sm text-blue-100">
-                    {b.startLocation || tripDetails[b.tripId]?.startLocation || "Unknown"} → {b.endLocation || tripDetails[b.tripId]?.endLocation || "Unknown"}
-                  </p>
-                </div>
+              return (
+                <motion.div
+                  key={b.bookingId}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3, delay: i * 0.04 }}
+                  onClick={() => setSelectedBookingCard(b)}
+                  className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                >
+                  {/* Top: date + status */}
+                  <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-gray-100">
+                    <p className="text-sm font-semibold text-gray-500">{fmtDate(depTime)}</p>
+                    <span className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${sm.bg} ${sm.text}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${sm.dot}`} />
+                      {sm.label}
+                    </span>
+                  </div>
 
-                {/* Card Body */}
-                <div className="p-4 space-y-3">
-                  {/* Trip Details */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Seats</p>
-                      <p className="text-xl font-bold text-blue-600">{b.seatsBooked}</p>
+                  {/* Route timeline */}
+                  <div className="px-6 py-5 flex gap-6 border-b border-gray-100">
+                    {/* Times */}
+                    <div className="flex flex-col justify-between text-right w-12 flex-shrink-0 py-0.5">
+                      <span className="text-base font-bold text-gray-900">{fmt(depTime)}</span>
+                      <span className="text-base font-bold text-gray-900">{fmt(arrTime)}</span>
                     </div>
-                    <div className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Total</p>
-                      <p className="text-xl font-bold text-green-600">₹{b.totalAmount}</p>
+
+                    {/* Dot-line */}
+                    <div className="flex flex-col items-center flex-shrink-0 py-1">
+                      <div className="w-2.5 h-2.5 rounded-full border-2 border-gray-400 bg-white" />
+                      <div className="w-px flex-1 bg-gray-300 my-1" style={{ minHeight: "28px" }} />
+                      <div className="w-2.5 h-2.5 rounded-full border-2 border-gray-400 bg-white" />
+                    </div>
+
+                    {/* Locations */}
+                    <div className="flex flex-col justify-between flex-1 py-0.5">
+                      <p className="text-base font-bold text-gray-900">{start}</p>
+                      <p className="text-base font-bold text-gray-900">{end}</p>
+                    </div>
+
+                    {/* Price */}
+                    <div className="flex-shrink-0 text-right self-center">
+                      <p className="text-xl font-extrabold text-gray-900">₹{b.totalAmount}</p>
+                      <p className="text-xs text-gray-400">{b.seatsBooked} seat{b.seatsBooked > 1 ? "s" : ""}</p>
                     </div>
                   </div>
 
-                  {/* Departure Info */}
-                  <div className="bg-blue-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-600 font-semibold mb-1">Departure Time</p>
-                    <p className="text-sm text-gray-900">
-                      {b.departureTime
-                        ? new Date(b.departureTime).toLocaleString()
-                        : tripDetails[b.tripId]?.departureTime
-                        ? new Date(tripDetails[b.tripId].departureTime).toLocaleString()
-                        : "Not specified"}
-                    </p>
-                  </div>
+                  {/* Driver row + actions */}
+                  <div className="px-6 py-4 flex items-center justify-between gap-4">
+                    {/* Driver info */}
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-bold flex-shrink-0">
+                        {ownerName.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{ownerName}</p>
+                        <div className="flex items-center gap-1 text-xs text-gray-400">
+                          <span className="text-yellow-400">★</span>
+                          <span>5</span>
+                        </div>
+                      </div>
+                    </div>
 
-                  {/* Owner Info */}
-                  <div className="flex items-center gap-2 text-sm bg-purple-50 rounded-lg p-3">
-                    <span className="font-semibold text-gray-700">Owner:</span>
-                    <span className="text-gray-900 font-semibold">{userNames[tripDetails[b.tripId]?.ownerId] || b.tripOwnerName || b.driverName || b.ownerName || "Unknown"}</span>
+                    {/* Cancel button — only if not already cancelled/rejected */}
+                    {b.status !== "Cancelled" && b.status !== "Rejected" && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleCancel(b.bookingId); }}
+                        className="px-4 py-2 rounded-full border border-red-300 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
+                      >
+                        Cancel booking
+                      </button>
+                    )}
                   </div>
-
-                  {tripLoadError && <div className="text-red-600 text-xs">{tripLoadError}</div>}
-                </div>
-
-                {/* Card Footer - Actions */}
-                {b.status !== "Cancelled" && (
-                  <div className="border-t border-gray-100 p-4 space-y-3">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      // --- FIX APPLIED HERE ---
-                      onClick={() => {
-                        // 1. Prepare data for pre-selection in Chats.jsx
-                        const preSelectData = {
-                          tripId: b.tripId,
-                          bookingId: b.bookingId, // <--- Crucial fix: Pass bookingId
-                          type: "driver",
-                          ownerName: userNames[tripDetails[b.tripId]?.ownerId] || "Driver"
-                        };
-                        localStorage.setItem("preSelectChat", JSON.stringify(preSelectData));
-                        
-                        // 2. Update the persistent activeChats list to keep the conversation after a refresh
-                        const convId = `booking-${b.bookingId}`;
-                        const savedChats = localStorage.getItem("activeChats");
-                        const activeConversationIds = savedChats ? JSON.parse(savedChats) : [];
-                        
-                        if (!activeConversationIds.includes(convId)) {
-                            activeConversationIds.push(convId);
-                            localStorage.setItem("activeChats", JSON.stringify(activeConversationIds));
-                        }
-                        
-                        // 3. Navigate to the chats page
-                        navigate("/chats");
-                      }}
-                      className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
-                    >
-                      <FiMessageCircle className="w-4 h-4" />
-                      Chat with Owner
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleCancel(b.bookingId)}
-                      className="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition-colors"
-                    >
-                      ❌ Cancel Booking
-                    </motion.button>
-                  </div>
-                )}
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
