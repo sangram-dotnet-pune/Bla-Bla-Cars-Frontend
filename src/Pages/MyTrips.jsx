@@ -80,6 +80,20 @@ const normalizeTripStatus = (status) => {
   return raw;
 };
 
+const STAT_ICON_STYLES = {
+  blue: "bg-blue-100",
+  green: "bg-green-100",
+  yellow: "bg-yellow-100",
+  purple: "bg-purple-100",
+};
+
+const STAT_ICON_COLORS = {
+  blue: "text-blue-600",
+  green: "text-green-600",
+  yellow: "text-yellow-600",
+  purple: "text-purple-600",
+};
+
 export default function MyTrips() {
   const navigate = useNavigate();
   const [trips, setTrips] = useState([]);
