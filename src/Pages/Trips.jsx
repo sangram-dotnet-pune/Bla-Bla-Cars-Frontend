@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useLocation, Link } from "react-router-dom";
 import useTrips from "../Hooks/useTrips";
 import TripCard from "../Components/TripCard";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,10 +32,20 @@ const TIME_SLOTS = [
 
 export default function Trips() {
   const { trips, loading, error, refresh } = useTrips();
+  const location = useLocation();
+  const searchFromRef = useRef(null);
   const [searchFrom, setSearchFrom] = useState("");
   const [searchTo, setSearchTo] = useState("");
   const [sortBy, setSortBy] = useState("earliest");
   const [timeFilters, setTimeFilters] = useState([]);
+  const [authPrompt, setAuthPrompt] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.focusSearch) {
+      searchFromRef.current?.focus();
+      window.history.replaceState({}, "");
+    }
+  }, [location.state]);
 
   const toggleTime = (key) =>
     setTimeFilters((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
@@ -85,6 +96,7 @@ export default function Trips() {
         <input
           type="text"
           placeholder="Leaving from"
+          ref={searchFromRef}
           value={searchFrom}
           onChange={(e) => setSearchFrom(e.target.value)}
           className="w-full bg-transparent text-[15px] font-semibold text-[#0d2b36] placeholder:text-[#aac4cc] placeholder:font-medium leading-none appearance-none !border-0 !outline-none !ring-0 !shadow-none focus:!border-0 focus:!outline-none focus:!ring-0 focus:!shadow-none"
@@ -238,7 +250,7 @@ export default function Trips() {
                     transition={{ duration: 0.22, delay: i * 0.04 }}
                     layout
                   >
-                    <TripCard trip={trip} />
+                    <TripCard trip={trip} onAuthRequired={() => setAuthPrompt(true)} />
                   </motion.div>
                 ))
               ) : (
@@ -252,6 +264,57 @@ export default function Trips() {
           </div>
         </div>
       </div>
+
+      {/* Auth prompt modal */}
+      <AnimatePresence>
+        {authPrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <div className="absolute inset-0 bg-black/40" onClick={() => setAuthPrompt(false)} />
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-[#e4eef1] p-8 text-center"
+            >
+              <div className="text-5xl mb-4">🚗</div>
+              <h2 className="text-2xl font-black text-[#054752] mb-2">
+                You need an account
+              </h2>
+              <p className="text-[#5a8690] text-[15px] mb-6">
+                Log in or create an account to book this ride.
+              </p>
+              <div className="space-y-3">
+                <Link
+                  to="/login"
+                  onClick={() => setAuthPrompt(false)}
+                  className="block w-full bg-[#00aff5] hover:bg-[#009ad9] text-white font-bold py-3 rounded-full transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setAuthPrompt(false)}
+                  className="block w-full border-2 border-[#00aff5] text-[#00aff5] hover:bg-[#eef9fe] font-bold py-3 rounded-full transition-colors"
+                >
+                  Create account
+                </Link>
+                <button
+                  onClick={() => setAuthPrompt(false)}
+                  className="w-full text-sm font-semibold text-[#8aacb1] hover:text-[#054752] py-1 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

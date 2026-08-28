@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import api from "../api/apiClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import StarRating from "../Components/StarRating";
+import ReviewModal from "../Components/ReviewModal";
+import { getRideReviewStatus, submitReview } from "../api/reviewApi";
 import {
   FiClock,
   FiUsers,
@@ -103,6 +106,31 @@ export default function MyTrips() {
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [bookingActionLoading, setBookingActionLoading] = useState({});
 
+  // Reviews (owner -> passenger)
+  const [rideReviewStatus, setRideReviewStatus] = useState({}); // bookingId -> { hasReviewed, rating, userId, name, loading }
+  const [reviewTarget, setReviewTarget] = useState(null); // { bookingId, rideId, revieweeId, name }
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const loadRideReviewStatus = async (tripId) => {
+    if (!tripId) return;
+    try {
+      const data = await getRideReviewStatus(tripId);
+      const map = {};
+      (data?.passengers || []).forEach((p) => {
+        map[p.bookingId] = {
+          hasReviewed: Boolean(p.hasReviewed),
+          rating: p.rating || null,
+          userId: p.userId,
+          name: p.name,
+          loading: false,
+        };
+      });
+      setRideReviewStatus(map);
+    } catch {
+      setRideReviewStatus({});
+    }
+  };
+
   const loadMyTrips = async () => {
     setLoading(true);
     try {
@@ -201,12 +229,66 @@ export default function MyTrips() {
     navigate("/chats");
   };
 
+  const openReviewPassenger = (booking) => {
+    const stat = rideReviewStatus[booking.bookingId] || {};
+    setReviewTarget({
+      bookingId: booking.bookingId,
+      rideId: selectedTrip.tripId,
+      revieweeId: stat.userId,
+      name: booking.passengerName || stat.name || "Passenger",
+    });
+  };
+
+  const handleSubmitReview = async (rating, comment) => {
+    if (!reviewTarget) return;
+    setSubmittingReview(true);
+    try {
+      await submitReview({
+        rideId: reviewTarget.rideId,
+        bookingId: reviewTarget.bookingId,
+        revieweeId: reviewTarget.revieweeId,
+        rating,
+        comment,
+      });
+      setRideReviewStatus((prev) => ({
+        ...prev,
+        [reviewTarget.bookingId]: {
+          ...(prev[reviewTarget.bookingId] || {}),
+          hasReviewed: true,
+          rating,
+          loading: false,
+        },
+      }));
+      setReviewTarget(null);
+      alert("Review submitted successfully.");
+    } catch (err) {
+      const status = err.response?.status;
+      const msg = err.response?.data?.message;
+      if (status === 409) {
+        alert(msg || "You have already reviewed this passenger.");
+      } else {
+        alert(msg || "Failed to submit review. Please try again.");
+      }
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
   useEffect(() => {
     loadMyTrips();
   }, []);
 
   useEffect(() => {
-    if (selectedTrip) loadTripBookings(selectedTrip.tripId);
+    if (!selectedTrip) {
+      setRideReviewStatus({});
+      return;
+    }
+    loadTripBookings(selectedTrip.tripId);
+    if (normalizeTripStatus(selectedTrip.status) === "Completed") {
+      loadRideReviewStatus(selectedTrip.tripId);
+    } else {
+      setRideReviewStatus({});
+    }
   }, [selectedTrip]);
 
   const stats = [
@@ -473,6 +555,28 @@ export default function MyTrips() {
                                       Chat
                                     </motion.button>
                                   </div>
+
+                                  {normalizeTripStatus(selectedTrip.status) === "Completed" &&
+                                    isApproved && (
+                                      <div className="pt-3 mt-3 border-t border-[#d6e4e8] flex items-center justify-between gap-3 flex-wrap">
+                                        <div className="text-sm flex items-center gap-2">
+                                          <span className="text-[#9db7bd]">Review passenger:</span>
+                                          {rideReviewStatus[booking.bookingId]?.hasReviewed ? (
+                                            <span className="flex items-center gap-1.5 text-green-700 font-bold text-sm">
+                                              <StarRating value={rideReviewStatus[booking.bookingId]?.rating || 0} size="w-4 h-4" />
+                                              Reviewed
+                                            </span>
+                                          ) : (
+                                            <button
+                                              onClick={() => openReviewPassenger(booking)}
+                                              className="px-4 py-1.5 rounded-full bg-[#00AFF5] text-white text-sm font-semibold hover:bg-[#009ad9] transition-colors"
+                                            >
+                                              Review Passenger
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
                                 </motion.div>
                               );
                             })}
@@ -496,6 +600,17 @@ export default function MyTrips() {
           </div>
         </div>
       </div>
+
+      {/* Owner review passenger modal */}
+      <ReviewModal
+        key={reviewTarget?.bookingId || "none"}
+        open={Boolean(reviewTarget)}
+        onClose={() => setReviewTarget(null)}
+        title={`Review ${reviewTarget?.name || "Passenger"}`}
+        subtitle="How was your passenger experience?"
+        submitting={submittingReview}
+        onSubmit={handleSubmitReview}
+      />
     </div>
   );
 }

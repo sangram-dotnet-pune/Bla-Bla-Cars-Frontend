@@ -3,15 +3,78 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/apiClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiX } from "react-icons/fi";
+import { useAuth } from "../Context/AuthContext";
+import StarRating from "../Components/StarRating";
+import ReviewModal from "../Components/ReviewModal";
+import { submitReview, getRideReviewStatus } from "../api/reviewApi";
+
+const normalizeTripStatus = (status) => {
+  if (status === null || status === undefined) return "Scheduled";
+  if (typeof status === "number") {
+    return ["Scheduled", "Ongoing", "Completed", "Cancelled"][status] || "Scheduled";
+  }
+  const lower = String(status).trim().toLowerCase();
+  if (lower === "scheduled") return "Scheduled";
+  if (lower === "ongoing") return "Ongoing";
+  if (lower === "completed") return "Completed";
+  if (lower === "cancelled" || lower === "canceled") return "Cancelled";
+  return String(status);
+};
+
+const normalizeBookingStatus = (status) => {
+  if (status === null || status === undefined) return "Pending";
+  if (typeof status === "number") {
+    return ["Pending", "Rejected", "Confirmed", "Cancelled", "Failed"][status] || "Pending";
+  }
+  const lower = String(status).trim().toLowerCase();
+  if (lower === "approved" || lower === "confirmed") return "Confirmed";
+  return String(status)
+    .charAt(0)
+    .toUpperCase() + String(status).slice(1).toLowerCase();
+};
 
 export default function ViewBookings() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const myUserId = user?.userId;
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tripDetails, setTripDetails] = useState({});
   const [userNames, setUserNames] = useState({});
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedBookingCard, setSelectedBookingCard] = useState(null);
+
+  // Reviews
+  const [reviewStatus, setReviewStatus] = useState({}); // tripId -> { hasReviewed, rating, revieweeId, loading }
+  const [reviewTarget, setReviewTarget] = useState(null); // { bookingId, rideId, revieweeId, name }
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const fetchReviewStatus = async (tripId) => {
+    if (!tripId || !myUserId) return;
+    setReviewStatus((prev) => ({ ...prev, [tripId]: { loading: true } }));
+    try {
+      const data = await getRideReviewStatus(tripId);
+      const rows = data?.passengers || [];
+      const mine =
+        rows.find(
+          (r) =>
+            String(r.userId) === String(myUserId) ||
+            String(r.id) === String(myUserId)
+        ) || rows[0];
+      const revieweeId = data?.passengers?.[0]?.revieweeId || null;
+      setReviewStatus((prev) => ({
+        ...prev,
+        [tripId]: {
+          loading: false,
+          hasReviewed: Boolean(mine?.hasReviewed),
+          rating: mine?.rating || null,
+          revieweeId,
+        },
+      }));
+    } catch {
+      setReviewStatus((prev) => ({ ...prev, [tripId]: { loading: false, hasReviewed: false, rating: null, revieweeId: null } }));
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -46,6 +109,15 @@ export default function ViewBookings() {
         }
         setTripDetails(newTripDetails);
         setUserNames(newUserNames);
+
+        for (const tripId of tripIds) {
+          if (tripId && !reviewStatus[tripId]) {
+            const trip = newTripDetails[tripId];
+            if (trip && normalizeTripStatus(trip.status) === "Completed") {
+              fetchReviewStatus(tripId);
+            }
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -65,6 +137,53 @@ export default function ViewBookings() {
       load();
     } catch {
       alert("Failed to cancel");
+    }
+  };
+
+  const openReview = (booking, trip) => {
+    const revieweeId =
+      reviewStatus[booking.tripId]?.revieweeId ||
+      trip?.ownerId ||
+      trip?.userId ||
+      trip?.driverId ||
+      trip?.driverUserId ||
+      null;
+    setReviewTarget({
+      bookingId: booking.bookingId,
+      rideId: booking.tripId,
+      revieweeId,
+      name: userNames[trip?.ownerId] || userNames[trip?.driverId] || booking.tripOwnerName || booking.driverName || booking.ownerName || "Driver",
+    });
+  };
+
+  const handleSubmitReview = async (rating, comment) => {
+    if (!reviewTarget) return;
+    setSubmittingReview(true);
+    try {
+      await submitReview({
+        rideId: reviewTarget.rideId,
+        bookingId: reviewTarget.bookingId,
+        revieweeId: reviewTarget.revieweeId,
+        rating,
+        comment,
+      });
+      const tripId = reviewTarget.rideId;
+      setReviewStatus((prev) => ({
+        ...prev,
+        [tripId]: { loading: false, hasReviewed: true, rating, revieweeId: reviewTarget.revieweeId },
+      }));
+      setReviewTarget(null);
+      alert("Review submitted successfully.");
+    } catch (err) {
+      const status = err.response?.status;
+      const msg = err.response?.data?.message;
+      if (status === 409) {
+        alert(msg || "You have already reviewed this ride.");
+      } else {
+        alert(msg || "Failed to submit review. Please try again.");
+      }
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -108,7 +227,7 @@ export default function ViewBookings() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-bold text-gray-900" style={{ fontFamily: "'Nunito', sans-serif" }}>
+          <h1 className="text-3xl font-bold text-gray-900" style={{ fontFamily: "'Montserrat', 'Inter', sans-serif" }}>
             My bookings
           </h1>
           <p className="text-gray-500 text-sm mt-1">Your upcoming and past rides</p>
@@ -247,8 +366,12 @@ export default function ViewBookings() {
               const start = b.startLocation || trip?.startLocation || "—";
               const end   = b.endLocation   || trip?.endLocation   || "—";
               const depTime = b.departureTime || trip?.departureTime;
-              const arrTime = b.arrivalTime   || trip?.arrivalTime;
               const sm = statusMeta(b.status);
+              const tripStatus = normalizeTripStatus(trip?.status);
+              const isCompletedRide = tripStatus === "Completed";
+              const isConfirmedBooking = normalizeBookingStatus(b.status) === "Confirmed";
+              const canReview = isCompletedRide && isConfirmedBooking;
+              const rStat = canReview ? reviewStatus[b.tripId] : null;
 
               return (
                 <motion.div
@@ -272,9 +395,8 @@ export default function ViewBookings() {
                   {/* Route timeline */}
                   <div className="px-6 py-5 flex gap-6 border-b border-gray-100">
                     {/* Times */}
-                    <div className="flex flex-col justify-between text-right w-12 flex-shrink-0 py-0.5">
+                    <div className="flex flex-col text-right w-12 flex-shrink-0 py-0.5">
                       <span className="text-base font-bold text-gray-900">{fmt(depTime)}</span>
-                      <span className="text-base font-bold text-gray-900">{fmt(arrTime)}</span>
                     </div>
 
                     {/* Dot-line */}
@@ -313,15 +435,33 @@ export default function ViewBookings() {
                       </div>
                     </div>
 
-                    {/* Cancel button — only if not already cancelled/rejected */}
-                    {b.status !== "Cancelled" && b.status !== "Rejected" && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleCancel(b.bookingId); }}
-                        className="px-4 py-2 rounded-full border border-red-300 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
-                      >
-                        Cancel booking
-                      </button>
-                    )}
+                    {/* Review + Cancel actions */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {canReview && rStat && !rStat.loading && (
+                        rStat.hasReviewed ? (
+                          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 border border-green-200 text-green-700 text-xs font-bold">
+                            <StarRating value={rStat.rating || 0} size="w-3.5 h-3.5" />
+                            Reviewed
+                          </span>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openReview(b, trip); }}
+                            className="px-4 py-2 rounded-full bg-[#00b2e3] text-white text-sm font-semibold hover:bg-[#009fcd] transition-colors"
+                          >
+                            Leave Review
+                          </button>
+                        )
+                      )}
+
+                      {!isCompletedRide && b.status !== "Cancelled" && b.status !== "Rejected" && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleCancel(b.bookingId); }}
+                          className="px-4 py-2 rounded-full border border-red-300 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
+                        >
+                          Cancel booking
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </motion.div>
               );
@@ -329,6 +469,17 @@ export default function ViewBookings() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Passenger review modal */}
+      <ReviewModal
+        key={reviewTarget?.bookingId || "none"}
+        open={Boolean(reviewTarget)}
+        onClose={() => setReviewTarget(null)}
+        title={`Review ${reviewTarget?.name || "Driver"}`}
+        subtitle="How was your ride?"
+        submitting={submittingReview}
+        onSubmit={handleSubmitReview}
+      />
     </div>
   );
 }

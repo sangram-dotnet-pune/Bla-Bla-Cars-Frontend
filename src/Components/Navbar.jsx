@@ -2,7 +2,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiMenu, FiX, FiLogOut, FiUser, FiEdit2, FiKey, FiMessageCircle } from "react-icons/fi";
+import { FiMenu, FiX, FiLogOut, FiUser, FiKey, FiMessageCircle, FiSearch, FiLogIn, FiUserPlus, FiBookmark, FiMap } from "react-icons/fi";
 import { MdDirectionsCar } from "react-icons/md";
 import "./Navbar.css";
 
@@ -13,6 +13,12 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef();
+
+  const goToSearch = () => {
+    setOpen(false);
+    setMobileMenuOpen(false);
+    navigate("/trips", { state: { focusSearch: true } });
+  };
 
   const toggleDropdown = () => setOpen((prev) => !prev);
 
@@ -60,53 +66,55 @@ export default function Navbar() {
             <span className="hidden sm:inline tracking-tight">BlaBlaTrips</span>
           </Link>
 
-          {/* Nav links + profile — pinned right via ml-auto */}
+          {/* Right actions — pinned right via ml-auto */}
           <div className="hidden md:flex items-center gap-1 ml-auto">
-            {isLoggedIn ? (
-              <>
-                <NavLink to="/trips" className={desktopNavClass}>
-                  Find Rides
-                </NavLink>
-                <NavLink to="/create-trip" className={desktopNavClass}>
-                  + Publish Ride
-                </NavLink>
-                <NavLink to="/my-trips" className={desktopNavClass}>
-                  My Trips
-                </NavLink>
-                <NavLink to="/bookings" className={desktopNavClass}>
-                  My Bookings
-                </NavLink>
+            {/* Search icon */}
+            <button
+              onClick={goToSearch}
+              aria-label="Search rides"
+              className="w-11 h-11 flex items-center justify-center rounded-2xl text-[#054752] hover:text-[#00AFF5] hover:bg-[#eef9fe] transition-all duration-300"
+            >
+              <FiSearch className="w-6 h-6" />
+            </button>
 
-                {/* Profile dropdown — separated with a divider */}
-                <div className="relative ml-3 pl-3 border-l border-[#d6e4e8]" ref={dropdownRef}>
-                  <button
-                    onClick={toggleDropdown}
-                    className="flex items-center gap-2.5 py-1.5 rounded-2xl text-[15px] font-semibold text-[#054752] hover:text-[#00AFF5] transition-all duration-300"
+            {/* Publish ride */}
+            <NavLink to="/create-trip" className={desktopNavClass}>
+              + Publish Ride
+            </NavLink>
+
+            {/* Profile dropdown */}
+            <div className="relative ml-3 pl-3 border-l border-[#d6e4e8]" ref={dropdownRef}>
+              <button
+                onClick={toggleDropdown}
+                aria-label="Account"
+                className="w-10 h-10 rounded-full bg-[#00AFF5] flex items-center justify-center text-white font-bold text-base hover:opacity-90 transition-opacity"
+              >
+                {isLoggedIn ? (user?.fullName?.charAt(0) || "U") : <FiUser className="w-5 h-5" />}
+              </button>
+
+              <AnimatePresence>
+                {open && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-60 bg-white rounded-2xl bb-elevation-soft border border-[#d6e4e8] overflow-hidden"
                   >
-                    <div className="w-9 h-9 rounded-full bg-[#00AFF5] flex items-center justify-center text-white font-bold text-base shrink-0">
-                      {user?.firstName?.charAt(0) || "U"}
-                    </div>
-                    <span className="hidden lg:inline">{user?.firstName}</span>
-                  </button>
-
-                  <AnimatePresence>
-                    {open && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute right-0 mt-2 w-65 bg-white rounded-2xl bb-elevation-soft border border-[#d6e4e8] overflow-hidden"
-                      >
+                    {isLoggedIn ? (
+                      <>
                         <div className="px-4 py-3 border-b border-[#e4eef1]">
                           <p className="text-sm text-[#8aacb1]">Signed in as</p>
-                          <p className="font-bold text-[#054752] text-[15px]">{user?.fullName} </p>
+                          <p className="font-bold text-[#054752] text-[15px]">{user?.fullName}</p>
                         </div>
                         <Link to="/profile" className="flex items-center gap-3 px-4 py-3 text-[14px] text-[#054752] hover:bg-[#eef9fe] transition-colors" onClick={() => setOpen(false)}>
                           <FiUser className="w-4 h-4" /> View Profile
                         </Link>
-                        <Link to="/edit-profile" className="flex items-center gap-3 px-4 py-3 text-[14px] text-[#054752] hover:bg-[#eef9fe] transition-colors" onClick={() => setOpen(false)}>
-                          <FiEdit2 className="w-4 h-4" /> Edit Profile
+                        <Link to="/my-trips" className="flex items-center gap-3 px-4 py-3 text-[14px] text-[#054752] hover:bg-[#eef9fe] transition-colors" onClick={() => setOpen(false)}>
+                          <FiMap className="w-4 h-4" /> My Trips
+                        </Link>
+                        <Link to="/bookings" className="flex items-center gap-3 px-4 py-3 text-[14px] text-[#054752] hover:bg-[#eef9fe] transition-colors" onClick={() => setOpen(false)}>
+                          <FiBookmark className="w-4 h-4" /> My Bookings
                         </Link>
                         <Link to="/change-password" className="flex items-center gap-3 px-4 py-3 text-[14px] text-[#054752] hover:bg-[#eef9fe] transition-colors" onClick={() => setOpen(false)}>
                           <FiKey className="w-4 h-4" /> Change Password
@@ -120,21 +128,25 @@ export default function Navbar() {
                         >
                           <FiLogOut className="w-4 h-4" /> Logout
                         </button>
-                      </motion.div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="px-4 py-3 border-b border-[#e4eef1]">
+                          <p className="text-sm text-[#8aacb1]">Welcome</p>
+                          <p className="font-bold text-[#054752] text-[15px]">Join BlaBlaTrips</p>
+                        </div>
+                        <Link to="/login" className="flex items-center gap-3 px-4 py-3 text-[14px] text-[#054752] hover:bg-[#eef9fe] transition-colors" onClick={() => setOpen(false)}>
+                          <FiLogIn className="w-4 h-4" /> Login
+                        </Link>
+                        <Link to="/register" className="flex items-center gap-3 px-4 py-3 text-[14px] text-[#054752] hover:bg-[#eef9fe] border-t border-[#e4eef1] transition-colors" onClick={() => setOpen(false)}>
+                          <FiUserPlus className="w-4 h-4" /> Register
+                        </Link>
+                      </>
                     )}
-                  </AnimatePresence>
-                </div>
-              </>
-            ) : (
-              <>
-                <Link to="/login" className="bb-pill-button bb-button-secondary px-5 py-2 text-[#054752] font-semibold text-[15px]">
-                  Login
-                </Link>
-                <Link to="/register" className="bb-pill-button bb-button-primary px-5 py-2.5 text-white font-semibold text-[15px]">
-                  Sign Up
-                </Link>
-              </>
-            )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* Mobile hamburger — always far right */}
@@ -162,10 +174,13 @@ export default function Navbar() {
                   {/* User greeting */}
                   <div className="flex items-center gap-3 px-4 py-3 mb-1 bg-[#eef9fe] rounded-2xl">
                     <div className="w-9 h-9 rounded-full bg-[#00AFF5] flex items-center justify-center text-white font-bold text-base shrink-0">
-                      {user?.firstName?.charAt(0) || "U"}
+                      {user?.fullName?.charAt(0) || "U"}
                     </div>
-                    <span className="font-bold text-[#054752] text-[15px]">{user?.firstName} {user?.lastName}</span>
+                    <span className="font-bold text-[#054752] text-[15px]">{user?.fullName}</span>
                   </div>
+                  <button onClick={goToSearch} className="w-full flex items-center gap-3 px-4 py-2.5 text-[15px] text-left text-[#054752] hover:bg-[#eef9fe] rounded-2xl transition-colors">
+                    <FiSearch className="w-5 h-5 text-[#00AFF5]" /> Search rides
+                  </button>
                   <NavLink to="/trips" className={mobileNavClass} onClick={() => setMobileMenuOpen(false)}>
                     Find Rides
                   </NavLink>
@@ -184,9 +199,6 @@ export default function Navbar() {
                   <NavLink to="/profile" className={mobileNavClass} onClick={() => setMobileMenuOpen(false)}>
                     Profile
                   </NavLink>
-                  <NavLink to="/edit-profile" className={mobileNavClass} onClick={() => setMobileMenuOpen(false)}>
-                    Edit Profile
-                  </NavLink>
                   <button
                     onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
                     className="w-full px-4 py-2.5 text-[15px] text-left text-red-600 hover:bg-red-50 rounded-2xl transition-colors border-t border-[#e4eef1] mt-1"
@@ -196,6 +208,9 @@ export default function Navbar() {
                 </>
               ) : (
                 <>
+                  <button onClick={goToSearch} className="w-full flex items-center gap-3 px-4 py-2.5 text-[15px] text-left text-[#054752] hover:bg-[#eef9fe] rounded-2xl transition-colors">
+                    <FiSearch className="w-5 h-5 text-[#00AFF5]" /> Search rides
+                  </button>
                   <Link
                     to="/login"
                     className="block w-full px-4 py-2.5 text-[15px] text-center text-[#054752] border border-[#c9dde3] rounded-[30px] hover:bg-[#eef9fe] transition-colors"

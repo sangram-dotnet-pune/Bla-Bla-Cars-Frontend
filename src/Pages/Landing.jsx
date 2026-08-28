@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
+import CarAnimation from "../Components/CarAnimation";
 import {
   FiMapPin,
   FiUsers,
@@ -47,13 +48,6 @@ export default function Landing() {
       title: "Easy Communication",
       description: "Chat directly with drivers and passengers in real-time.",
     },
-  ];
-
-  const stats = [
-    { number: "10K+", label: "Active Users" },
-    { number: "50K+", label: "Rides Completed" },
-    { number: "100+", label: "Cities Covered" },
-    { number: "4.8*", label: "Average Rating" },
   ];
 
   return (
@@ -112,24 +106,26 @@ export default function Landing() {
               </motion.button>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate("/register")}
-                className="bb-pill-button bb-button-primary text-lg"
-              >
-                Get Started Free
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate("/login")}
-                className="bb-pill-button bb-button-secondary text-lg"
-              >
-                Sign In
-              </motion.button>
-            </div>
+            {!isLoggedIn && (
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate("/register")}
+                  className="bb-pill-button bb-button-primary text-lg"
+                >
+                  Get Started Free
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate("/login")}
+                  className="bb-pill-button bb-button-secondary text-lg"
+                >
+                  Sign In
+                </motion.button>
+              </div>
+            )}
           </motion.div>
 
           <motion.div
@@ -156,22 +152,19 @@ export default function Landing() {
         </div>
       </div>
 
-      <div className="bg-[#054752] py-16">
+      <div className="py-16 bg-[#054752] overflow-hidden">
         <div className="max-w-7xl mx-auto bb-section">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {stats.map((stat, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: idx * 0.1 }}
-                viewport={{ once: true }}
-              >
-                <div className="text-5xl font-extrabold text-white mb-2">{stat.number}</div>
-                <div className="text-[#C7E4ED] font-medium">{stat.label}</div>
-              </motion.div>
-            ))}
+          <div className="text-center mb-10">
+            <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-3">
+              On the Road with You
+            </h2>
+            <p className="text-lg text-[#C7E4ED]">
+              Smooth journeys, shared miles, endless destinations.
+            </p>
           </div>
+
+          {/* Animated car scene */}
+          <CarAnimation />
         </div>
       </div>
 
@@ -272,11 +265,7 @@ export default function Landing() {
         </div>
       )}
 
-      <div className="bg-[#043741] text-white py-12">
-        <div className="max-w-7xl mx-auto bb-section text-center">
-          <p className="text-[#A6C2C9]">© 2025 Bla Bla Cars. All rights reserved.</p>
-        </div>
-      </div>
+    
     </div>
   );
 }

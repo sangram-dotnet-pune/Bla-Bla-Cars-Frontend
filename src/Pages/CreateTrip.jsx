@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../Context/AuthContext";
 import api from "../api/apiClient";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -624,11 +625,14 @@ function Step6({ data, onChange, onPublish, onBack, loading, published }) {
 // ─── ROOT COMPONENT ───────────────────────────────────────────────────────────
 export default function CreateTrip() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isLoggedIn = Boolean(user?.userId || user?.id || user?.email);
 
   const [step,      setStep]      = useState(1);
   const [direction, setDirection] = useState(1);
   const [loading,   setLoading]   = useState(false);
   const [published, setPublished] = useState(false);
+  const [authPrompt, setAuthPrompt] = useState(false);
 
   const [form, setForm] = useState({
     startLocation:  "",
@@ -643,10 +647,22 @@ export default function CreateTrip() {
   const onChange = (key, value) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  const requireAuth = (next) => {
+    if (!isLoggedIn) {
+      setAuthPrompt(true);
+    } else {
+      next();
+    }
+  };
+
   const goNext = () => { setDirection(1);  setStep((s) => Math.min(s + 1, TOTAL_STEPS)); };
   const goBack = () => { setDirection(-1); setStep((s) => Math.max(s - 1, 1)); };
 
   const handlePublish = async () => {
+    if (!isLoggedIn) {
+      setAuthPrompt(true);
+      return;
+    }
     setLoading(true);
     try {
       const payload = {
@@ -670,7 +686,7 @@ export default function CreateTrip() {
   };
 
   const steps = {
-    1: <Step1 data={form} onChange={onChange} onNext={goNext} />,
+    1: <Step1 data={form} onChange={onChange} onNext={() => requireAuth(goNext)} />,
     2: <Step2 data={form} onChange={onChange} onNext={goNext} onBack={goBack} />,
     3: <Step3 data={form} onChange={onChange} onNext={goNext} onBack={goBack} />,
     4: <Step4 data={form} onChange={onChange} onNext={goNext} onBack={goBack} />,
@@ -726,6 +742,57 @@ export default function CreateTrip() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Auth prompt modal */}
+      <AnimatePresence>
+        {authPrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <div className="absolute inset-0 bg-black/40" onClick={() => setAuthPrompt(false)} />
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-[#e4eef1] p-8 text-center"
+            >
+              <div className="text-5xl mb-4">🚙</div>
+              <h2 className="text-2xl font-black text-[#054752] mb-2">
+                You need an account
+              </h2>
+              <p className="text-[#5a8690] text-[15px] mb-6">
+                Log in or create an account to publish your ride.
+              </p>
+              <div className="space-y-3">
+                <Link
+                  to="/login"
+                  onClick={() => setAuthPrompt(false)}
+                  className="block w-full bg-[#00aff5] hover:bg-[#009ad9] text-white font-bold py-3 rounded-full transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setAuthPrompt(false)}
+                  className="block w-full border-2 border-[#00aff5] text-[#00aff5] hover:bg-[#eef9fe] font-bold py-3 rounded-full transition-colors"
+                >
+                  Create account
+                </Link>
+                <button
+                  onClick={() => setAuthPrompt(false)}
+                  className="w-full text-sm font-semibold text-[#8aacb1] hover:text-[#054752] py-1 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

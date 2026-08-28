@@ -30,7 +30,7 @@ const mapHistoryMessage = (msg) => ({
   sentAt: msg.sentAt || msg.createdAt || new Date().toISOString(),
 });
 
-export default function ChatPanel({ booking, tripOwner, chatPartnerName }) {
+export default function ChatPanel({ booking, conversationBookingId = "", tripOwner, chatPartnerName }) {
   const { user } = useAuth();
 
   const [connection, setConnection] = useState(null);
@@ -55,10 +55,11 @@ export default function ChatPanel({ booking, tripOwner, chatPartnerName }) {
     setInput("");
     setError("");
     setStatus(booking ? "connecting" : "idle");
-  }, [booking?.bookingId]);
+  }, [booking?.bookingId, conversationBookingId]);
 
   useEffect(() => {
-    if (!booking?.bookingId || !user?.userId) return undefined;
+    const convBookingId = conversationBookingId || booking?.bookingId;
+    if (!convBookingId || !user?.userId) return undefined;
 
     let isCancelled = false;
     let conn;
@@ -92,7 +93,7 @@ export default function ChatPanel({ booking, tripOwner, chatPartnerName }) {
         }
 
         const conversationRes = await api.post("/chat/conversation", {
-          bookingId: booking.bookingId,
+          bookingId: convBookingId,
           passengerId,
           driverId,
         });
@@ -194,7 +195,7 @@ export default function ChatPanel({ booking, tripOwner, chatPartnerName }) {
         conn.stop();
       }
     };
-  }, [booking, user?.userId, tripOwner?.ownerId]);
+  }, [booking, conversationBookingId, user?.userId, tripOwner?.ownerId]);
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -220,7 +221,7 @@ export default function ChatPanel({ booking, tripOwner, chatPartnerName }) {
       await connection.invoke("SendMessage", conversationId, senderId, receiverId, messageText);
 
       const active = JSON.parse(localStorage.getItem("activeChats") || "[]");
-      const key = `booking-${booking.bookingId}`;
+      const key = `booking-${conversationBookingId || booking.bookingId}`;
       if (!active.includes(key)) {
         active.push(key);
         localStorage.setItem("activeChats", JSON.stringify(active));

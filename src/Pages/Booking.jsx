@@ -4,8 +4,8 @@ import api from "../api/apiClient";
 import BookingForm from "../Components/BookingForm";
 import { motion } from "framer-motion";
 import { useAuth } from "../Context/AuthContext";
-import { FiChevronRight, FiZap, FiSlash, FiHeart, FiShield } from "react-icons/fi";
-import { MdOutlinePets } from "react-icons/md";
+import { getUserReviews } from "../api/reviewApi";
+import { FiChevronRight, FiShield, FiCheck, FiInfo } from "react-icons/fi";
 import { TbManualGearbox } from "react-icons/tb";
 
 export default function Booking() {
@@ -16,21 +16,53 @@ export default function Booking() {
   const [loading, setLoading] = useState(true);
   const [ownerName, setOwnerName] = useState("Owner");
   const [ownerAvatar, setOwnerAvatar] = useState(null);
+  const [ownerUserId, setOwnerUserId] = useState(null);
+  const [ownerPrefs, setOwnerPrefs] = useState([]);
+  const [ownerVehicle, setOwnerVehicle] = useState(null);
+  const [ownerReviews, setOwnerReviews] = useState(null);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   useEffect(() => {
     if (!tripId) return;
     (async () => {
       try {
         const res = await api.get(`/api/Trip/${tripId}`);
-        setTrip(res.data);
-        if (res.data?.ownerId) {
+        const data = res.data || {};
+        setTrip(data);
+        const ownerId =
+          data.userId || data.ownerId || data.driverId || data.driverUserId || null;
+        if (ownerId) {
+          setOwnerUserId(ownerId);
           try {
-            const userRes = await api.get(`/user/${res.data.ownerId}`);
-            setOwnerName(userRes.data?.fullName || userRes.data?.name || "Owner");
-            setOwnerAvatar(userRes.data?.avatarUrl || null);
+            const userRes = await api.get(`/auth/me/${ownerId}`);
+            const o = userRes.data?.user || userRes.data || {};
+            setOwnerName(o.fullName || o.name || "Owner");
+            setOwnerAvatar(o.avatarUrl || null);
+            const prefs = String(o.travelPreferences || o.travel_preferences || "")
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+            setOwnerPrefs(prefs);
+            const v = o.vehicle || {};
+            setOwnerVehicle({
+              make: v.make ?? o.make ?? "",
+              model: v.model ?? o.model ?? "",
+              year: v.year ?? o.year ?? "",
+              color: v.color ?? o.color ?? "",
+              licensePlate: v.licensePlate ?? o.licensePlate ?? "",
+            });
           } catch (err) {
             console.error("Failed to load owner", err);
+            try {
+              const fallback = await api.get(`/user/${ownerId}`);
+              setOwnerName(fallback.data?.fullName || fallback.data?.name || "Owner");
+              setOwnerAvatar(fallback.data?.avatarUrl || null);
+            } catch {
+              /* ignore */
+            }
           }
+        } else {
+          console.warn("No owner id found on trip object:", data);
         }
       } catch (err) {
         console.error(err);
@@ -41,6 +73,25 @@ export default function Booking() {
     })();
   }, [tripId]);
 
+  useEffect(() => {
+    if (!ownerUserId) return;
+    let active = true;
+    setReviewsLoading(true);
+    getUserReviews(ownerUserId)
+      .then((data) => {
+        if (active) setOwnerReviews(data);
+      })
+      .catch(() => {
+        if (active) setOwnerReviews(null);
+      })
+      .finally(() => {
+        if (active) setReviewsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [ownerUserId]);
+
   const handleSuccess = () => {
     navigate("/bookings");
   };
@@ -49,10 +100,6 @@ export default function Booking() {
     if (!dateStr) return "--:--";
     return new Date(dateStr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
   };
-
-  const duration = trip?.durationMinutes
-    ? `${Math.floor(trip.durationMinutes / 60)}h${trip.durationMinutes % 60 > 0 ? ` ${trip.durationMinutes % 60}m` : ""}`
-    : trip?.estimatedDuration || "2h 10m";
 
   if (loading)
     return (
@@ -106,13 +153,10 @@ export default function Booking() {
                 <div className="pb-6">
                   <p className="text-lg font-bold text-gray-900 leading-tight">{trip.startLocation}</p>
                   {trip.startAddress && <p className="text-sm text-gray-500 mt-0.5">{trip.startAddress}</p>}
-                  <span className="inline-block mt-1 text-xs text-gray-400 bg-gray-100 rounded px-2 py-0.5">{duration}</span>
                 </div>
               </div>
               <div className="flex gap-4">
-                <div className="w-14 text-right flex-shrink-0">
-                  <span className="text-lg font-bold text-gray-900">{trip.arrivalTime ? formatTime(trip.arrivalTime) : "—"}</span>
-                </div>
+                <div className="w-6 flex-shrink-0" />
                 <div className="flex flex-col items-center flex-shrink-0">
                   <div className="w-3 h-3 rounded-full border-2 border-gray-400 bg-white mt-1.5" />
                 </div>
@@ -130,7 +174,13 @@ export default function Booking() {
               transition={{ duration: 0.35, delay: 0.08 }}
               className="bg-white rounded-2xl border border-gray-200 p-6"
             >
-              <button className="w-full flex items-center justify-between group">
+              <button
+                type="button"
+                className="w-full flex items-center justify-between group"
+                onClick={() => {
+                  if (ownerUserId) navigate(`/owner/${ownerUserId}`);
+                }}
+              >
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     {ownerAvatar ? (
@@ -146,11 +196,25 @@ export default function Booking() {
                   </div>
                   <div className="text-left">
                     <p className="text-lg font-bold text-gray-900">{trip.driverName}</p>
-                    <div className="flex items-center gap-1 text-sm text-gray-500">
+                    <div className="flex items-center gap-1.5 text-sm text-gray-500">
                       <span className="text-yellow-400">★</span>
-                      <span>5/5</span>
+                      {reviewsLoading ? (
+                        <span className="font-semibold text-[#054752]">…</span>
+                      ) : ownerReviews && ownerReviews.totalReviews > 0 ? (
+                        <>
+                          <span className="font-semibold text-[#054752]">
+                            {Number(ownerReviews.averageRating).toFixed(1)}/5
+                          </span>
+                          <span className="text-gray-300 mx-1">·</span>
+                          <span>
+                            {ownerReviews.totalReviews} rating{ownerReviews.totalReviews > 1 ? "s" : ""}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="font-semibold text-[#054752]">No ratings yet</span>
+                      )}
                       <span className="text-gray-300 mx-1">·</span>
-                      <span>12 ratings</span>
+                      <span className="text-[#00b2e3] font-semibold group-hover:underline">View profile</span>
                     </div>
                   </div>
                 </div>
@@ -162,32 +226,38 @@ export default function Booking() {
                   <FiShield className="w-5 h-5 text-[#00b2e3] flex-shrink-0" />
                   <span className="text-sm">Verified Profile</span>
                 </div>
-                <div className="flex items-center gap-3 text-gray-600">
-                  <FiHeart className="w-5 h-5 text-[#00b2e3] flex-shrink-0" />
-                  <span className="text-sm">Rarely cancels rides</span>
-                </div>
-              </div>
-
-              <div className="mt-5 border-t border-gray-100 pt-5 space-y-3">
-                <div className="flex items-center gap-3 text-gray-500">
-                  <FiZap className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-sm">Your booking will be confirmed instantly</span>
-                </div>
-                <div className="flex items-center gap-3 text-gray-500">
-                  <FiSlash className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-sm">No smoking, please</span>
-                </div>
-                <div className="flex items-center gap-3 text-gray-500">
-                  <MdOutlinePets className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-sm">I'd prefer not to travel with pets</span>
-                </div>
-                {trip.vehicleInfo && (
+                {ownerPrefs.length > 0 ? (
+                  ownerPrefs.map((pref) => (
+                    <div key={pref} className="flex items-center gap-3 text-gray-600">
+                      <FiCheck className="w-5 h-5 text-[#00b2e3] flex-shrink-0" />
+                      <span className="text-sm">{pref}</span>
+                    </div>
+                  ))
+                ) : (
                   <div className="flex items-center gap-3 text-gray-500">
-                    <TbManualGearbox className="w-5 h-5 flex-shrink-0" />
-                    <span className="text-sm uppercase tracking-wide text-gray-400 font-medium">{trip.vehicleInfo}</span>
+                    <FiInfo className="w-5 h-5 text-[#00b2e3] flex-shrink-0" />
+                    <span className="text-sm">No travel preferences set</span>
                   </div>
                 )}
               </div>
+
+              {ownerVehicle && (ownerVehicle.make || ownerVehicle.model) && (
+                <div className="mt-5 border-t border-gray-100 pt-5 space-y-3">
+                  <div className="flex items-center gap-3 text-gray-500">
+                    <TbManualGearbox className="w-5 h-5 text-[#00b2e3] flex-shrink-0" />
+                    <span className="text-sm capitalize text-gray-700 font-medium">
+                      {[ownerVehicle.make, ownerVehicle.model].filter(Boolean).join(" ")}
+                    </span>
+                  </div>
+                  {(ownerVehicle.year || ownerVehicle.color || ownerVehicle.licensePlate) && (
+                    <div className="flex items-center gap-2 text-xs text-gray-400 pl-8">
+                      {[ownerVehicle.year, ownerVehicle.color, ownerVehicle.licensePlate]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           </div>
 
@@ -201,11 +271,11 @@ export default function Booking() {
               departureTime={trip.departureTime}
               ownerName={trip.driverName}
               ownerAvatar={ownerAvatar}
+              ownerId={ownerUserId}
               startLocation={trip.startLocation}
               endLocation={trip.endLocation}
               startAddress={trip.startAddress}
               endAddress={trip.endAddress}
-              arrivalTime={trip.arrivalTime}
               availableSeats={trip.availableSeats}
               onSuccess={handleSuccess}
             />

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import api from "../api/apiClient";
+import { useAuth } from "../Context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiAlertCircle, FiCheckCircle, FiShield, FiZap } from "react-icons/fi";
+import { FiAlertCircle, FiCheckCircle, FiShield, FiZap, FiChevronRight } from "react-icons/fi";
 
 export default function BookingForm({
   tripId,
@@ -13,13 +15,17 @@ export default function BookingForm({
   departureTime,
   ownerName,
   ownerAvatar,
+  ownerId,
   startLocation,
   endLocation,
   startAddress,
   endAddress,
-  arrivalTime,
   availableSeats,
 }) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const isLoggedIn = Boolean(user?.userId || user?.id || user?.email);
+  const [authPrompt, setAuthPrompt] = useState(false);
   const [seats, setSeats] = useState(1);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
@@ -68,6 +74,10 @@ export default function BookingForm({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isLoggedIn) {
+      setAuthPrompt(true);
+      return;
+    }
     if (isFull) {
       setStatus({
         type: "error",
@@ -104,7 +114,6 @@ export default function BookingForm({
     }
   };
 
-  // Whole-number and decimal parts for price display
   const totalWhole = Math.floor(total);
   const totalDecimal = (total % 1).toFixed(2).slice(1); // ".00"
 
@@ -162,14 +171,13 @@ export default function BookingForm({
             </div>
           </div>
 
-          {/* Arrival */}
+          {/* Arrival location */}
           <div className="flex gap-3">
             <div className="flex flex-col items-center pt-1 flex-shrink-0">
               <div className="w-2.5 h-2.5 rounded-full border-2 border-gray-400 bg-white" />
             </div>
             <div>
               <div className="flex items-baseline gap-2">
-                <span className="text-sm font-bold text-gray-900">{fmt(arrivalTime)}</span>
                 <span className="text-sm font-bold text-gray-900">{endLocation}</span>
               </div>
               {endAddress && (
@@ -180,7 +188,11 @@ export default function BookingForm({
         </div>
 
         {/* Driver mini row */}
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => ownerId && navigate(`/owner/${ownerId}`)}
+          className="w-full px-5 py-4 border-b border-gray-100 flex items-center gap-3 group text-left"
+        >
           {/* Car icon placeholder */}
           <div className="text-gray-400">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -194,7 +206,7 @@ export default function BookingForm({
               <img src={ownerAvatar} alt={driverName} className="w-9 h-9 rounded-full object-cover border-2 border-white shadow" />
             ) : (
               <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-bold border-2 border-white shadow">
-                {driverName || "?"}
+                {(driverName || "?").charAt(0)}
               </div>
             )}
             <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#00b2e3] rounded-full flex items-center justify-center">
@@ -202,14 +214,15 @@ export default function BookingForm({
             </div>
           </div>
 
-          <div>
-            <p className="text-sm font-semibold text-gray-900">{ownerName}</p>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-gray-900 group-hover:underline">{ownerName}</p>
             <div className="flex items-center gap-1 text-xs text-gray-400">
               <span className="text-yellow-400">★</span>
-              <span>5</span>
+              <span>5 · View profile</span>
             </div>
           </div>
-        </div>
+          <FiChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0" />
+        </button>
 
         {/* Passenger count & price */}
         <form onSubmit={handleSubmit}>
@@ -289,6 +302,57 @@ export default function BookingForm({
       <p className="text-xs text-gray-400 text-center px-2">
         By clicking Book, you agree to our terms and conditions.
       </p>
+
+      {/* Auth prompt modal */}
+      <AnimatePresence>
+        {authPrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <div className="absolute inset-0 bg-black/40" onClick={() => setAuthPrompt(false)} />
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-[#e4eef1] p-8 text-center"
+            >
+              <div className="text-5xl mb-4">🚗</div>
+              <h2 className="text-2xl font-black text-[#054752] mb-2">
+                You need an account
+              </h2>
+              <p className="text-[#5a8690] text-[15px] mb-6">
+                Log in or create an account to book this ride.
+              </p>
+              <div className="space-y-3">
+                <Link
+                  to="/login"
+                  onClick={() => setAuthPrompt(false)}
+                  className="block w-full bg-[#00aff5] hover:bg-[#009ad9] text-white font-bold py-3 rounded-full transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setAuthPrompt(false)}
+                  className="block w-full border-2 border-[#00aff5] text-[#00aff5] hover:bg-[#eef9fe] font-bold py-3 rounded-full transition-colors"
+                >
+                  Create account
+                </Link>
+                <button
+                  onClick={() => setAuthPrompt(false)}
+                  className="w-full text-sm font-semibold text-[#8aacb1] hover:text-[#054752] py-1 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

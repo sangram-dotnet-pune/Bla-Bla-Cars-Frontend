@@ -171,45 +171,79 @@ export default function Chats() {
         }
       }
 
-      const uniqueByBooking = new Map();
+      const byPair = new Map();
+      const currentUserGuid = firstGuid(user?.userId, user?.id, user?.guid);
       chats.forEach((chat) => {
-        const key = String(chat.bookingId);
-        if (!uniqueByBooking.has(key)) {
-          const trip = tripsById[chat.tripId];
-          const ownerId = trip?.ownerId;
-          const ownerGuid = ownerId ? metaByOwnerId[ownerId]?.guid : "";
+        const trip = tripsById[chat.tripId];
+        const ownerId = trip?.ownerId;
+        const ownerGuid = ownerId ? metaByOwnerId[ownerId]?.guid : "";
 
-          uniqueByBooking.set(key, {
-            ...chat,
-            status: normalizeBookingStatus(chat.status),
-            driverId: firstGuid(
-              chat.driverId,
-              chat.driverUserId,
-              chat.driverGuid,
-              chat.ownerUserId,
-              chat.ownerGuid,
-              ownerGuid
-            ),
-            passengerId: firstGuid(
-              chat.passengerId,
-              chat.passengerUserId,
-              chat.passengerGuid,
-              chat.userId
-            ),
-          });
+        const driverId = firstGuid(
+          chat.driverId,
+          chat.driverUserId,
+          chat.driverGuid,
+          chat.ownerUserId,
+          chat.ownerGuid,
+          trip?.driverId,
+          trip?.ownerId,
+          trip?.userId,
+          chat.type === "passenger" ? currentUserGuid : "",
+          ownerGuid
+        );
+        const passengerId = firstGuid(
+          chat.passengerId,
+          chat.passengerUserId,
+          chat.passengerGuid,
+          chat.userId,
+          chat.type === "driver" ? currentUserGuid : ""
+        );
+
+        if (!driverId || !passengerId) return;
+
+        const pairKey = `pair-${[driverId, passengerId].sort().join("-")}`;
+        if (!byPair.has(pairKey)) {
+          byPair.set(pairKey, []);
         }
+        byPair.get(pairKey).push({
+          ...chat,
+          status: normalizeBookingStatus(chat.status),
+          driverId,
+          passengerId,
+        });
       });
 
-      const finalChats = Array.from(uniqueByBooking.values());
+      // One conversation per driver<->passenger pair (not per booking).
+      const finalChats = [];
+      byPair.forEach((memberChats) => {
+        const memberBookingIds = memberChats
+          .map((c) => String(c.bookingId))
+          .filter(Boolean);
+        const canonicalBookingId = [...memberBookingIds].sort()[0] || "";
+
+        const representative =
+          [...memberChats].sort((a, b) => {
+            const rankA = a.status === "Confirmed" ? 0 : 1;
+            const rankB = b.status === "Confirmed" ? 0 : 1;
+            return rankA - rankB;
+          })[0] || memberChats[0];
+
+        finalChats.push({
+          ...representative,
+          conversationKey: `pair-${[representative.driverId, representative.passengerId]
+            .sort()
+            .join("-")}`,
+          canonicalBookingId,
+          memberBookingIds,
+        });
+      });
+
       setAllChats(finalChats);
       setTripDetails(tripsById);
       setUserMeta(metaByOwnerId);
 
       if (preSelect?.bookingId) {
-        const matched = finalChats.find(
-          (c) =>
-            String(c.bookingId) === String(preSelect.bookingId) &&
-            (!preSelect.type || c.type === preSelect.type)
+        const matched = finalChats.find((c) =>
+          c.memberBookingIds.includes(String(preSelect.bookingId))
         );
         setSelectedChat(matched || finalChats[0] || null);
       } else {
@@ -302,6 +336,7 @@ export default function Chats() {
             <section className="flex-1 min-h-0 bg-white">
               <ChatPanel
                 booking={selectedChat}
+                conversationBookingId={selectedChat ? selectedChat.canonicalBookingId : ""}
                 tripOwner={selectedChat ? (tripDetails[selectedChat.tripId] || selectedChat.tripData || null) : null}
                 chatPartnerName={selectedChat ? getChatPartnerName(selectedChat) : ""}
               />

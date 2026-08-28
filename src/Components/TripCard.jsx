@@ -1,13 +1,26 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useAuth } from "../Context/AuthContext";
 import { FiStar, FiZap, FiUsers } from "react-icons/fi";
 import { MdDirectionsCar } from "react-icons/md";
 
-export default function TripCard({ trip }) {
+export default function TripCard({ trip, onAuthRequired }) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const isLoggedIn = Boolean(user?.userId || user?.id || user?.email);
+
   const date = new Date(trip.departureTime);
   const seatsAvailable = Number(trip.availableSeats);
   const hasSeatsValue = Number.isFinite(seatsAvailable);
   const isFull = hasSeatsValue && seatsAvailable <= 0;
+
+  const handleCardClick = () => {
+    if (!isLoggedIn) {
+      onAuthRequired?.();
+    } else {
+      navigate(`/booking/${trip.tripId}`);
+    }
+  };
 
   const formattedTime = date.toLocaleTimeString("en-US", {
     hour: "2-digit",
@@ -15,14 +28,7 @@ export default function TripCard({ trip }) {
     hour12: false,
   });
 
-  // Fake arrival time: departure + random 2–10h for demo
-  const estimatedDuration = Math.floor(Math.random() * 8) + 2;
-  const arrivalDate = new Date(date.getTime() + estimatedDuration * 60 * 60 * 1000);
-  const arrivalTime = arrivalDate.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+
 
   const driverName = trip.driverName || "Driver";
   const driverRating = trip.driverRating || null;
@@ -54,9 +60,7 @@ export default function TripCard({ trip }) {
                 <div className="flex items-center w-full gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full border-2 border-[#6b8fa0] bg-white shrink-0" />
                   <div className="flex-1 h-[2px] bg-[#6b8fa0]" />
-                  <span className="text-[12px] font-semibold text-[#6b8fa0] whitespace-nowrap px-1.5">
-                    {estimatedDuration}h{String(Math.floor(Math.random() * 60)).padStart(2,"0")}
-                  </span>
+                
                   <div className="flex-1 h-[2px] bg-[#6b8fa0]" />
                   <div className="w-2.5 h-2.5 rounded-full border-2 border-[#6b8fa0] bg-[#6b8fa0] shrink-0" />
                 </div>
@@ -64,7 +68,6 @@ export default function TripCard({ trip }) {
 
               {/* Right: arrival time + city */}
               <div className="min-w-[72px] text-right">
-                <p className="text-[22px] font-extrabold text-[#0d2b36] leading-none">{arrivalTime}</p>
                 <p className="text-[14px] font-semibold text-[#0d2b36] mt-1">{trip.endLocation}</p>
               </div>
 
@@ -130,7 +133,7 @@ export default function TripCard({ trip }) {
           </div>
         </div>
       ) : (
-      <Link to={`/booking/${trip.tripId}`} className="block no-underline">
+      <div role="button" tabIndex={0} onClick={handleCardClick} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleCardClick()} className="block no-underline cursor-pointer">
         <div className="bg-white rounded-2xl border border-[#e4eef1] overflow-hidden cursor-pointer transition-all duration-200">
 
          
@@ -147,9 +150,6 @@ export default function TripCard({ trip }) {
               <div className="flex items-center w-full gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full border-2 border-[#6b8fa0] bg-white shrink-0" />
                 <div className="flex-1 h-[2px] bg-[#6b8fa0]" />
-                <span className="text-[12px] font-semibold text-[#6b8fa0] whitespace-nowrap px-1.5">
-                  {estimatedDuration}h{String(Math.floor(Math.random() * 60)).padStart(2,"0")}
-                </span>
                 <div className="flex-1 h-[2px] bg-[#6b8fa0]" />
                 <div className="w-2.5 h-2.5 rounded-full border-2 border-[#6b8fa0] bg-[#6b8fa0] shrink-0" />
               </div>
@@ -157,7 +157,7 @@ export default function TripCard({ trip }) {
 
             {/* Right: arrival time + city */}
             <div className="min-w-[72px] text-right">
-              <p className="text-[22px] font-extrabold text-[#0d2b36] leading-none">{arrivalTime}</p>
+        
               <p className="text-[14px] font-semibold text-[#0d2b36] mt-1">{trip.endLocation}</p>
             </div>
 
@@ -232,7 +232,7 @@ export default function TripCard({ trip }) {
           </div>
 
         </div>
-      </Link>
+      </div>
       )}
     </motion.div>
   );
