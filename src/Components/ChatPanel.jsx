@@ -5,7 +5,7 @@ import { useAuth } from "../Context/AuthContext";
 import api from "../api/apiClient";
 
 const CHAT_HUB_CANDIDATES = () => {
-  const gateway = import.meta.env.API_GATEWAY || "http://localhost:5003";
+  const gateway = "https://api.trickyone.site" || "http://localhost:5003";
   return [`${gateway.replace(/\/$/, "")}/hubs/chat`];
 };
 

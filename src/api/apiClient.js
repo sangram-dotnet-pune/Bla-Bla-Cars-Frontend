@@ -2,7 +2,7 @@ import axios from "axios";
 
 const api = axios.create({
   //changed base url 
-  baseURL: import.meta.env.API_GATEWAY || "http://localhost:5003",
+  baseURL: "https://api.trickyone.site" || "http://localhost:5003",
   headers: {
     "Content-Type": "application/json",
   },

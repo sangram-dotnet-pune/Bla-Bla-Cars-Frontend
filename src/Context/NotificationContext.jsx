@@ -5,7 +5,7 @@ import { useAuth } from "./AuthContext";
 const NotificationContext = createContext();
 
 const hubCandidates = () => {
-  const gateway = import.meta.env.VITE_API_GATEWAY || "http://localhost:5003";
+  const gateway = "https://api.trickyone.site" || "http://localhost:5003";
   return [`${gateway.replace(/\/$/, "")}/hubs/chat`];
 };
 
